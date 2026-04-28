@@ -1,0 +1,1 @@
+INSERT INTO finance (periode,cabang,tipe,kategori,keterangan,jumlah,metode_pembayaran,referensi) VALUES ('2026-04','Makassar','Pengeluaran','Asuransi','Asuransi - Makassar 2026-04',3371599,'Transfer Bank','FIN003751'),('2026-04','Makassar','Pengeluaran','Pemeliharaan','Pemeliharaan - Makassar 2026-04',4519641,'Kartu Kredit','FIN003752') ON CONFLICT DO NOTHING
