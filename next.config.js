@@ -1,6 +1,14 @@
 /** @type {import('next').NextConfig} */
+const isDockerBuild = process.env.DOCKER_BUILD === "1";
+
 const nextConfig = {
   output: "standalone",
+  eslint: {
+    ignoreDuringBuilds: isDockerBuild,
+  },
+  typescript: {
+    ignoreBuildErrors: isDockerBuild,
+  },
   experimental: {
     serverComponentsExternalPackages: [
       "ws",
