@@ -1,0 +1,31 @@
+{
+  "id": "lemorax-tools",
+  "name": "Lemorax Business Data",
+  "description": "Read-only SQL access to PT Lemorax Supabase business tables.",
+  "version": "0.1.0",
+  "configSchema": {
+    "type": "object",
+    "required": [
+      "baseUrl",
+      "toolSecret"
+    ],
+    "properties": {
+      "baseUrl": {
+        "type": "string",
+        "description": "ARIES dashboard base URL, e.g. http://127.0.0.1:3000"
+      },
+      "toolSecret": {
+        "type": "string",
+        "description": "Bearer token for /api/agents/tools/query-business-data"
+      }
+    }
+  },
+  "activation": {
+    "onStartup": true
+  },
+  "contracts": {
+    "tools": [
+      "query_business_data"
+    ]
+  }
+}

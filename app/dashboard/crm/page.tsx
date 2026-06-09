@@ -7,19 +7,15 @@ import { TopBar } from "@/components/layout/TopBar";
 import { MetricCard } from "@/components/cards/MetricCard";
 import { DataTable } from "@/components/tables/DataTable";
 import { formatRupiahShort, formatRupiah, formatPct, getCRMStatusColor, formatDateID } from "@/lib/formatters";
-import { LemoraxPieChart } from "@/components/charts/PieChart";
+import { AriesPieChart } from "@/components/charts/PieChart";
 import { AlertTriangle, X } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, Cell
 } from "recharts";
 import { formatPeriode } from "@/lib/formatters";
+import { CHART_PRIMARY, getCategoricalColor } from "@/lib/brand";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
-
-const STATUS_COLORS: Record<string, string> = {
-  "Closed Won": "#14B8A6", "Closed Lost": "#EF4444",
-  Negotiation: "#3B82F6", Proposal: "#8B5CF6", Prospecting: "#F59E0B",
-};
 
 export default function CRMPage() {
   const { periodeStart, periodeEnd, cabang } = useFilters();
@@ -41,6 +37,13 @@ export default function CRMPage() {
 
   const tipeChartData = (data?.tipeBreakdown || []).map((t: any) => ({ name: t.name, value: t.value }));
 
+  const funnelStages = data?.funnelData || [];
+  const funnelRanked = [...funnelStages].sort((a: any, b: any) => (b.value || 0) - (a.value || 0));
+  const funnelColorByStage: Record<string, string> = {};
+  funnelRanked.forEach((f: any, i: number) => {
+    funnelColorByStage[f.stage] = getCategoricalColor(i, funnelRanked.length);
+  });
+
   const twoWeeksAgo = new Date();
   twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
 
@@ -52,7 +55,7 @@ export default function CRMPage() {
     { key: "account_manager", label: "AM" },
     {
       key: "nilai_deal", label: "Nilai Deal", sortable: true, align: "right" as const,
-      render: (r: any) => <span style={{ fontFamily: "var(--font-jetbrains-mono)", color: "#14B8A6" }}>{formatRupiahShort(r.nilai_deal)}</span>
+      render: (r: any) => <span style={{ color: "#1652F0" }}>{formatRupiahShort(r.nilai_deal)}</span>
     },
     {
       key: "status", label: "Status",
@@ -74,7 +77,7 @@ export default function CRMPage() {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
           {/* Funnel */}
           <div className="card-base p-5">
-            <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)", fontFamily: "var(--font-sora)" }}>Pipeline Funnel</h3>
+            <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)" }}>Pipeline Funnel</h3>
             {isLoading ? <div className="skeleton h-48 rounded-xl" /> : (
               <div className="space-y-2">
                 {(data?.funnelData || []).map((f: any, i: number) => {
@@ -87,7 +90,7 @@ export default function CRMPage() {
                         <span style={{ color: "var(--text-muted)" }}>{f.count} deals · {formatRupiahShort(f.value)}</span>
                       </div>
                       <div className="h-7 rounded-lg overflow-hidden" style={{ background: "var(--bg-tertiary)" }}>
-                        <div className="h-full rounded-lg transition-all" style={{ width: `${pct}%`, background: STATUS_COLORS[f.stage] || "#3B82F6", opacity: 0.85 }} />
+                        <div className="h-full rounded-lg transition-all" style={{ width: `${pct}%`, background: funnelColorByStage[f.stage] || CHART_PRIMARY, opacity: 0.92 }} />
                       </div>
                     </div>
                   );
@@ -98,20 +101,20 @@ export default function CRMPage() {
 
           {/* Tipe Bisnis */}
           <div className="card-base p-5">
-            <h3 className="text-sm font-semibold mb-2" style={{ color: "var(--text-primary)", fontFamily: "var(--font-sora)" }}>Breakdown Tipe Bisnis</h3>
-            <LemoraxPieChart data={tipeChartData} loading={isLoading} donut formatter={formatRupiah} />
+            <h3 className="text-sm font-semibold mb-2" style={{ color: "var(--text-primary)" }}>Breakdown Tipe Bisnis</h3>
+            <AriesPieChart data={tipeChartData} loading={isLoading} donut formatter={formatRupiah} />
           </div>
 
           {/* Top AMs */}
           <div className="card-base p-5">
-            <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)", fontFamily: "var(--font-sora)" }}>Top Account Managers</h3>
+            <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)" }}>Top Account Managers</h3>
             {isLoading ? <div className="skeleton h-48 rounded-xl" /> : (
               <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-thin">
                 {(data?.topAMs || []).slice(0, 8).map((am: any, i: number) => (
                   <div key={i} className="flex items-center gap-2 text-xs">
-                    <span className="w-5 font-bold text-center" style={{ color: "#F59E0B" }}>#{i+1}</span>
+                    <span className="w-5 font-bold text-center" style={{ color: i < 3 ? CHART_PRIMARY : "var(--text-muted)" }}>#{i+1}</span>
                     <span className="flex-1 truncate" style={{ color: "var(--text-secondary)" }}>{am.am}</span>
-                    <span style={{ color: "#14B8A6", fontFamily: "var(--font-jetbrains-mono)" }}>{formatRupiahShort(am.value)}</span>
+                    <span style={{ color: "#1652F0",  }}>{formatRupiahShort(am.value)}</span>
                   </div>
                 ))}
               </div>
@@ -124,7 +127,7 @@ export default function CRMPage() {
           <div className="card-base p-5">
             <div className="flex items-center gap-2 mb-4">
               <AlertTriangle size={15} color="#F59E0B" />
-              <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)", fontFamily: "var(--font-sora)" }}>
+              <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
                 Perlu Follow-Up Segera ({data.staleDeals.length} deals)
               </h3>
             </div>
@@ -133,7 +136,7 @@ export default function CRMPage() {
                 <div key={i} className="p-3 rounded-xl text-xs" style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)" }}>
                   <p className="font-semibold mb-1" style={{ color: "var(--text-primary)" }}>{d.nama_perusahaan}</p>
                   <p style={{ color: "var(--text-secondary)" }}>AM: {d.account_manager}</p>
-                  <p style={{ color: "#14B8A6" }}>Nilai: {formatRupiahShort(d.nilai_deal)}</p>
+                  <p style={{ color: "#1652F0" }}>Nilai: {formatRupiahShort(d.nilai_deal)}</p>
                   <p style={{ color: "#F59E0B" }}>Last FU: {d.last_follow_up?.slice(0,10) || "—"}</p>
                 </div>
               ))}
@@ -143,7 +146,7 @@ export default function CRMPage() {
 
         {/* Deals Table */}
         <div className="card-base p-5">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)", fontFamily: "var(--font-sora)" }}>
+          <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
             Semua Deals
           </h3>
           <DataTable
@@ -170,7 +173,7 @@ export default function CRMPage() {
           <div className="w-full max-w-lg rounded-2xl p-6 max-h-[80vh] overflow-y-auto scrollbar-thin" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }}>
             <div className="flex items-start justify-between mb-5">
               <div>
-                <h2 className="text-base font-bold" style={{ fontFamily: "var(--font-sora)", color: "var(--text-primary)" }}>{selectedDeal.nama_perusahaan}</h2>
+                <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>{selectedDeal.nama_perusahaan}</h2>
                 <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>{selectedDeal.deal_id} · {selectedDeal.tipe_bisnis}</p>
               </div>
               <button onClick={() => setSelectedDeal(null)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
@@ -180,7 +183,7 @@ export default function CRMPage() {
             <div className="space-y-3 text-sm">
               {[
                 ["Status", <span className={`badge ${getCRMStatusColor(selectedDeal.status)}`}>{selectedDeal.status}</span>],
-                ["Nilai Deal", <span style={{ fontFamily: "var(--font-jetbrains-mono)", color: "#14B8A6" }}>{formatRupiah(selectedDeal.nilai_deal)}</span>],
+                ["Nilai Deal", <span style={{ color: "#1652F0" }}>{formatRupiah(selectedDeal.nilai_deal)}</span>],
                 ["Account Manager", selectedDeal.account_manager],
                 ["Cabang Handler", selectedDeal.cabang_handler],
                 ["Produk Utama", selectedDeal.produk_utama],

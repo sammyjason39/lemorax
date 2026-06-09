@@ -72,11 +72,11 @@ export function calcDelta(current: number, previous: number): number {
 }
 
 /**
- * Get color class for delta (positive = teal, negative = red)
+ * Get color class for delta (positive = brand blue, negative = red)
  */
 export function getDeltaColor(delta: number): string {
-  if (delta > 0) return "text-teal-400";
-  if (delta < 0) return "text-red-400";
+  if (delta > 0) return "text-[#1652F0]";
+  if (delta < 0) return "text-red-500";
   return "text-slate-400";
 }
 
@@ -84,8 +84,8 @@ export function getDeltaColor(delta: number): string {
  * Get bg color class for delta
  */
 export function getDeltaBgColor(delta: number): string {
-  if (delta > 0) return "bg-teal-400/10 text-teal-400";
-  if (delta < 0) return "bg-red-400/10 text-red-400";
+  if (delta > 0) return "bg-[#DCE5FE] text-[#1652F0]";
+  if (delta < 0) return "bg-red-400/10 text-red-500";
   return "bg-slate-400/10 text-slate-400";
 }
 
@@ -94,12 +94,12 @@ export function getDeltaBgColor(delta: number): string {
  */
 export function getKPIStatusColor(status: string): string {
   const map: Record<string, string> = {
-    Excellent: "bg-teal-400/15 text-teal-400 border-teal-400/30",
-    "On Track": "bg-blue-400/15 text-blue-400 border-blue-400/30",
-    Warning: "bg-amber-400/15 text-amber-400 border-amber-400/30",
-    "Below Target": "bg-red-400/15 text-red-400 border-red-400/30",
+    Excellent: "bg-[#DCE5FE] text-[#1652F0] border-[#1652F0]/30",
+    "On Track": "bg-[#DCE5FE]/60 text-[#3B5CB8] border-[#3B5CB8]/30",
+    Warning: "bg-slate-100 text-[#6B7280] border-[#94A3B8]/40",
+    "Below Target": "bg-slate-200 text-[#1E293B] border-[#475569]/40",
   };
-  return map[status] || "bg-slate-400/15 text-slate-400 border-slate-400/30";
+  return map[status] || "bg-slate-100 text-slate-500 border-slate-300/40";
 }
 
 /**
@@ -107,13 +107,13 @@ export function getKPIStatusColor(status: string): string {
  */
 export function getCRMStatusColor(status: string): string {
   const map: Record<string, string> = {
-    "Closed Won": "bg-teal-400/15 text-teal-400 border-teal-400/30",
-    "Closed Lost": "bg-red-400/15 text-red-400 border-red-400/30",
-    Negotiation: "bg-blue-400/15 text-blue-400 border-blue-400/30",
-    Proposal: "bg-purple-400/15 text-purple-400 border-purple-400/30",
-    Prospecting: "bg-amber-400/15 text-amber-400 border-amber-400/30",
+    "Closed Won": "bg-[#DCE5FE] text-[#1652F0] border-[#1652F0]/30",
+    "Closed Lost": "bg-slate-200 text-[#1E293B] border-[#475569]/40",
+    Negotiation: "bg-[#DCE5FE]/60 text-[#3B5CB8] border-[#3B5CB8]/30",
+    Proposal: "bg-slate-100 text-[#6B7280] border-[#94A3B8]/40",
+    Prospecting: "bg-slate-50 text-[#94A3B8] border-[#CBD5E1]/60",
   };
-  return map[status] || "bg-slate-400/15 text-slate-400 border-slate-400/30";
+  return map[status] || "bg-slate-100 text-slate-500 border-slate-300/40";
 }
 
 /**
@@ -121,11 +121,11 @@ export function getCRMStatusColor(status: string): string {
  */
 export function getSalesStatusColor(status: string): string {
   const map: Record<string, string> = {
-    Closed: "bg-teal-400/15 text-teal-400 border-teal-400/30",
-    Pending: "bg-amber-400/15 text-amber-400 border-amber-400/30",
-    Cancelled: "bg-red-400/15 text-red-400 border-red-400/30",
+    Closed: "bg-[#DCE5FE] text-[#1652F0] border-[#1652F0]/30",
+    Pending: "bg-slate-100 text-[#6B7280] border-[#94A3B8]/40",
+    Cancelled: "bg-slate-200 text-[#1E293B] border-[#475569]/40",
   };
-  return map[status] || "bg-slate-400/15 text-slate-400 border-slate-400/30";
+  return map[status] || "bg-slate-100 text-slate-500 border-slate-300/40";
 }
 
 /**

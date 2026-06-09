@@ -15,9 +15,7 @@ module.exports = {
     },
     extend: {
       fontFamily: {
-        sora: ["var(--font-sora)", "sans-serif"],
-        dm: ["var(--font-dm-sans)", "sans-serif"],
-        mono: ["var(--font-jetbrains-mono)", "monospace"],
+        sans: ["var(--font-geist-sans)", "system-ui", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -40,6 +38,13 @@ module.exports = {
         accent: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
+        },
+        brand: {
+          ink: "#0A0A0A",
+          blue: "#1652F0",
+          slate: "#1E293B",
+          mist: "#F8FAFC",
+          hairline: "#E5E7EB",
         },
       },
       borderRadius: {

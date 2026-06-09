@@ -103,7 +103,7 @@ export function DataTable<T extends Record<string, any>>({
               border: "1px solid var(--border)",
               color: "var(--text-primary)",
             }}
-            onFocus={(e) => (e.target.style.borderColor = "#3B82F6")}
+            onFocus={(e) => (e.target.style.borderColor = "#1652F0")}
             onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
           />
         </div>
@@ -129,7 +129,7 @@ export function DataTable<T extends Record<string, any>>({
                   <div className="flex items-center gap-1.5">
                     {col.label}
                     {col.sortable && (
-                      <span style={{ color: sortKey === String(col.key) ? "#3B82F6" : "var(--text-muted)" }}>
+                      <span style={{ color: sortKey === String(col.key) ? "#1652F0" : "var(--text-muted)" }}>
                         {sortKey === String(col.key) ? (
                           sortDir === "asc" ? <ChevronUp size={12} /> : <ChevronDown size={12} />
                         ) : (
@@ -227,7 +227,7 @@ export function DataTable<T extends Record<string, any>>({
                   onClick={() => setPage(p)}
                   className="w-7 h-7 rounded-md text-xs transition-colors"
                   style={{
-                    background: p === page ? "#3B82F6" : "transparent",
+                    background: p === page ? "#1652F0" : "transparent",
                     color: p === page ? "white" : "var(--text-secondary)",
                   }}
                 >

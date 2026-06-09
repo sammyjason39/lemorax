@@ -5,6 +5,7 @@ import { TopBar } from "@/components/layout/TopBar";
 import { Bot, Send, User, Code, ChevronRight, Database, Sparkles, Brain } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { streamAgentChat } from "@/lib/agents/chat-stream";
 
 interface Message {
   id: string;
@@ -36,7 +37,7 @@ function ThinkingBubble() {
       {/* Avatar */}
       <div
         className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5"
-        style={{ background: "linear-gradient(135deg, #14B8A6, #0E9484)" }}
+        style={{ background: "linear-gradient(135deg, #1652F0, #1E293B)" }}
       >
         <Bot size={14} color="white" />
       </div>
@@ -56,13 +57,13 @@ function ThinkingBubble() {
             className="w-7 h-7 rounded-full flex items-center justify-center"
             style={{ background: "rgba(20,184,166,0.15)" }}
           >
-            <Brain size={14} color="#14B8A6" />
+            <Brain size={14} color="#1652F0" />
           </div>
           {/* outer ring pulse */}
           <span
             className="absolute inset-0 rounded-full"
             style={{
-              border: "1.5px solid #14B8A6",
+              border: "1.5px solid #1652F0",
               animation: "ping 1.4s cubic-bezier(0, 0, 0.2, 1) infinite",
               opacity: 0.5,
             }}
@@ -70,7 +71,7 @@ function ThinkingBubble() {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium" style={{ color: "#14B8A6" }}>
+          <span className="text-xs font-medium" style={{ color: "#1652F0" }}>
             Menganalisis data...
           </span>
           {/* Three bouncing dots */}
@@ -82,7 +83,7 @@ function ThinkingBubble() {
                 style={{
                   width: 5,
                   height: 5,
-                  background: i % 2 === 0 ? "#14B8A6" : "#3B82F6",
+                  background: i % 2 === 0 ? "#1652F0" : "#1652F0",
                   animation: `bounce 1.1s ${i * 0.12}s ease-in-out infinite`,
                   opacity: 0.8,
                 }}
@@ -106,7 +107,6 @@ function MarkdownContent({ content }: { content: string }) {
             className="text-lg font-bold mt-4 mb-2 pb-1"
             style={{
               color: "var(--text-primary)",
-              fontFamily: "var(--font-sora)",
               borderBottom: "1px solid var(--border)",
             }}
           >
@@ -116,7 +116,7 @@ function MarkdownContent({ content }: { content: string }) {
         h2: ({ children }) => (
           <h2
             className="text-base font-bold mt-4 mb-2"
-            style={{ color: "#14B8A6", fontFamily: "var(--font-sora)" }}
+            style={{ color: "#1652F0" }}
           >
             {children}
           </h2>
@@ -124,7 +124,7 @@ function MarkdownContent({ content }: { content: string }) {
         h3: ({ children }) => (
           <h3
             className="text-sm font-semibold mt-3 mb-1.5"
-            style={{ color: "#3B82F6", fontFamily: "var(--font-sora)" }}
+            style={{ color: "#1652F0" }}
           >
             {children}
           </h3>
@@ -140,7 +140,7 @@ function MarkdownContent({ content }: { content: string }) {
           </strong>
         ),
         em: ({ children }) => (
-          <em style={{ color: "#94A3B8" }}>{children}</em>
+          <em className="font-medium not-italic" style={{ color: "#1652F0" }}>{children}</em>
         ),
         ul: ({ children }) => (
           <ul className="text-sm space-y-1 mb-3 pl-4" style={{ color: "var(--text-primary)", listStyleType: "disc" }}>
@@ -162,9 +162,8 @@ function MarkdownContent({ content }: { content: string }) {
             <code
               className="px-1.5 py-0.5 rounded text-[11px]"
               style={{
-                background: "rgba(20,184,166,0.12)",
-                color: "#14B8A6",
-                fontFamily: "var(--font-jetbrains-mono)",
+                background: "rgba(22,82,240,0.1)",
+                color: "#1652F0",
               }}
             >
               {children}
@@ -175,8 +174,7 @@ function MarkdownContent({ content }: { content: string }) {
               style={{
                 background: "var(--bg-primary)",
                 border: "1px solid var(--border)",
-                color: "#14B8A6",
-                fontFamily: "var(--font-jetbrains-mono)",
+                color: "#1652F0",
               }}
             >
               <code>{children}</code>
@@ -184,10 +182,10 @@ function MarkdownContent({ content }: { content: string }) {
           ),
         blockquote: ({ children }) => (
           <blockquote
-            className="pl-3 py-1 my-2 text-sm italic"
+            className="pl-3 py-1 my-2 text-sm"
             style={{
-              borderLeft: "3px solid #14B8A6",
-              color: "#94A3B8",
+              borderLeft: "3px solid #1652F0",
+              color: "#3B5CB8",
             }}
           >
             {children}
@@ -212,7 +210,7 @@ function MarkdownContent({ content }: { content: string }) {
         th: ({ children }) => (
           <th
             className="px-3 py-2 text-left font-semibold"
-            style={{ color: "#14B8A6", border: "1px solid var(--border)" }}
+            style={{ color: "#1652F0", border: "1px solid var(--border)" }}
           >
             {children}
           </th>
@@ -263,56 +261,46 @@ export default function AIAnalystPage() {
     ]);
 
     try {
-      const res = await fetch("/api/ai-chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+      await streamAgentChat({
+        message: text,
+        onEvent: (parsed) => {
+          if (parsed.type === "meta" && parsed.sql_query) {
+            setActiveQuery({ sql: parsed.sql_query, result: parsed.queryResult, explanation: parsed.explanation });
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId
+                  ? { ...m, isThinking: false, sqlQuery: parsed.sql_query, queryResult: parsed.queryResult, explanation: parsed.explanation }
+                  : m
+              )
+            );
+          } else if (parsed.type === "meta" && parsed.source === "qwen-fallback" && parsed.note) {
+            // Keep thinking while Qwen fallback runs.
+          } else if (parsed.type === "meta" && parsed.source === "qwen-fallback") {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === assistantId ? { ...m, isThinking: false } : m))
+            );
+          } else if (parsed.type === "chunk") {
+            assistantContent += parsed.content;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId ? { ...m, isThinking: false, content: assistantContent } : m
+              )
+            );
+          } else if (parsed.type === "error") {
+            assistantContent += `\n\n❌ **Error:** ${parsed.message}`;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId ? { ...m, isThinking: false, content: assistantContent.trim() } : m
+              )
+            );
+          }
+        },
       });
-
-      if (!res.ok) throw new Error("Gagal terhubung ke AI");
-      if (!res.body) throw new Error("No response body");
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const lines = decoder.decode(value).split("\n");
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const raw = line.slice(6);
-          if (raw === "[DONE]") break;
-
-          try {
-            const parsed = JSON.parse(raw);
-            if (parsed.type === "meta") {
-              // Got SQL + data — switch from thinking to streaming mode
-              setActiveQuery({ sql: parsed.sql_query, result: parsed.queryResult, explanation: parsed.explanation });
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantId
-                    ? { ...m, isThinking: false, sqlQuery: parsed.sql_query, queryResult: parsed.queryResult, explanation: parsed.explanation }
-                    : m
-                )
-              );
-            } else if (parsed.type === "chunk") {
-              assistantContent += parsed.content;
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantId ? { ...m, isThinking: false, content: assistantContent } : m
-                )
-              );
-            }
-          } catch {}
-        }
-      }
     } catch (e: any) {
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantId
-            ? { ...m, isThinking: false, content: `❌ **Error:** ${e.message}\n\nPastikan OPENROUTER_API_KEY sudah dikonfigurasi.` }
+            ? { ...m, isThinking: false, content: `❌ **Error:** ${e.message}\n\nPastikan OpenClaw gateway berjalan dan env OPENCLAW_* sudah dikonfigurasi.` }
             : m
         )
       );
@@ -338,7 +326,7 @@ export default function AIAnalystPage() {
       `}</style>
 
       <div className="page-enter flex flex-col h-screen">
-        <TopBar title="AI Analyst" subtitle="Tanya apa saja tentang bisnis Lemorax" />
+        <TopBar title="AI Analyst" subtitle="ARIES AI · Tanya apa saja tentang bisnis PT Lemorax" />
 
         <div className="flex flex-1 overflow-hidden">
           {/* ── Chat Panel ── */}
@@ -351,14 +339,14 @@ export default function AIAnalystPage() {
                   <div
                     className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
                     style={{
-                      background: "linear-gradient(135deg, rgba(20,184,166,0.2), rgba(59,130,246,0.2))",
-                      border: "1px solid rgba(20,184,166,0.3)",
+                      background: "var(--blue-soft)",
+                      border: "1px solid rgba(22,82,240,0.2)",
                     }}
                   >
-                    <Sparkles size={28} color="#14B8A6" />
+                    <Sparkles size={28} color="#1652F0" />
                   </div>
-                  <h2 className="text-lg font-bold mb-2" style={{ fontFamily: "var(--font-sora)", color: "var(--text-primary)" }}>
-                    Halo, saya Lemorax AI Analyst
+                  <h2 className="text-lg font-sans font-extrabold mb-2" style={{ color: "#1652F0", letterSpacing: "-0.03em" }}>
+                    Halo, saya ARIES AI Analyst
                   </h2>
                   <p className="text-sm mb-6 max-w-sm" style={{ color: "var(--text-secondary)" }}>
                     Tanya saya apa saja tentang performa bisnis, sales, karyawan, atau keuangan PT Lemorax.
@@ -379,7 +367,7 @@ export default function AIAnalystPage() {
                           (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
                         }}
                       >
-                        <ChevronRight size={12} className="inline mr-1.5" style={{ color: "#14B8A6" }} />
+                        <ChevronRight size={12} className="inline mr-1.5" style={{ color: "#1652F0" }} />
                         {q}
                       </button>
                     ))}
@@ -392,7 +380,7 @@ export default function AIAnalystPage() {
                       <div key={msg.id} className="flex gap-3 flex-row-reverse">
                         <div
                           className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5"
-                          style={{ background: "linear-gradient(135deg, #3B82F6, #2563EB)" }}
+                          style={{ background: "linear-gradient(135deg, #1652F0, #2563EB)" }}
                         >
                           <User size={14} color="white" />
                         </div>
@@ -421,7 +409,7 @@ export default function AIAnalystPage() {
                     <div key={msg.id} className="flex gap-3">
                       <div
                         className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5"
-                        style={{ background: "linear-gradient(135deg, #14B8A6, #0E9484)" }}
+                        style={{ background: "linear-gradient(135deg, #1652F0, #1E293B)" }}
                       >
                         <Bot size={14} color="white" />
                       </div>
@@ -445,7 +433,7 @@ export default function AIAnalystPage() {
                                   style={{
                                     width: 5,
                                     height: 5,
-                                    background: "#14B8A6",
+                                    background: "#1652F0",
                                     animation: `bounce 1.1s ${i * 0.15}s ease-in-out infinite`,
                                   }}
                                 />
@@ -457,7 +445,7 @@ export default function AIAnalystPage() {
                           <button
                             onClick={() => setActiveQuery({ sql: msg.sqlQuery, result: msg.queryResult, explanation: msg.explanation })}
                             className="mt-1.5 flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-lg transition-colors"
-                            style={{ color: "#3B82F6", background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.2)" }}
+                            style={{ color: "#1652F0", background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.2)" }}
                           >
                             <Code size={11} /> Lihat SQL Query
                           </button>
@@ -486,7 +474,7 @@ export default function AIAnalystPage() {
                       sendMessage(input);
                     }
                   }}
-                  placeholder="Tanya tentang bisnis Lemorax..."
+                  placeholder="Tanya tentang bisnis PT Lemorax..."
                   rows={1}
                   className="flex-1 bg-transparent text-sm outline-none resize-none scrollbar-thin"
                   style={{ color: "var(--text-primary)", maxHeight: "120px" }}
@@ -495,7 +483,7 @@ export default function AIAnalystPage() {
                   onClick={() => sendMessage(input)}
                   disabled={!input.trim() || isLoading}
                   className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all disabled:opacity-30"
-                  style={{ background: "linear-gradient(135deg, #14B8A6, #3B82F6)" }}
+                  style={{ background: "linear-gradient(135deg, #1652F0, #1652F0)" }}
                 >
                   <Send size={14} color="white" />
                 </button>
@@ -510,7 +498,7 @@ export default function AIAnalystPage() {
           <div className="w-96 flex flex-col overflow-hidden" style={{ background: "var(--bg-secondary)" }}>
             <div className="px-4 py-3 border-b" style={{ borderColor: "var(--border)" }}>
               <div className="flex items-center gap-2">
-                <Database size={14} color="#3B82F6" />
+                <Database size={14} color="#1652F0" />
                 <span className="text-xs font-semibold" style={{ color: "var(--text-secondary)" }}>Data Context</span>
               </div>
             </div>
@@ -519,7 +507,7 @@ export default function AIAnalystPage() {
               {!activeQuery ? (
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ background: "rgba(59,130,246,0.1)" }}>
-                    <Database size={20} color="#3B82F6" />
+                    <Database size={20} color="#1652F0" />
                   </div>
                   <p className="text-xs" style={{ color: "var(--text-muted)" }}>
                     SQL query dan hasil data akan ditampilkan di sini setelah Anda bertanya
@@ -551,7 +539,7 @@ export default function AIAnalystPage() {
                       <p className="text-[10px] uppercase tracking-widest mb-2" style={{ color: "var(--text-muted)" }}>SQL Query</p>
                       <pre
                         className="p-3 rounded-xl text-[11px] overflow-x-auto scrollbar-thin"
-                        style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", color: "#14B8A6", fontFamily: "var(--font-jetbrains-mono)", whiteSpace: "pre-wrap" }}
+                        style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", color: "#1652F0", whiteSpace: "pre-wrap" }}
                       >
                         {activeQuery.sql}
                       </pre>
@@ -562,7 +550,7 @@ export default function AIAnalystPage() {
                       <p className="text-[10px] uppercase tracking-widest mb-2" style={{ color: "var(--text-muted)" }}>Hasil Data</p>
                       <pre
                         className="p-3 rounded-xl text-[10px] overflow-auto scrollbar-thin max-h-64"
-                        style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", color: "#94A3B8", fontFamily: "var(--font-jetbrains-mono)" }}
+                        style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", color: "#94A3B8" }}
                       >
                         {JSON.stringify(activeQuery.result, null, 2)}
                       </pre>

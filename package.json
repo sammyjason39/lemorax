@@ -1,14 +1,17 @@
 {
-  "name": "lemorax-dashboard",
+  "name": "aries-dashboard",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "setup:staff-supabase": "node scripts/setup-staff-supabase.mjs",
+    "import:staff-supabase": "node scripts/import-staff-to-supabase.mjs"
   },
   "dependencies": {
+    "@a2a-js/sdk": "^0.3.13",
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-dropdown-menu": "^2.0.6",
     "@radix-ui/react-label": "^2.0.2",
@@ -20,9 +23,12 @@
     "@radix-ui/react-tabs": "^1.0.4",
     "@radix-ui/react-tooltip": "^1.0.7",
     "@supabase/supabase-js": "^2.39.3",
+    "@types/ws": "^8.18.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "date-fns": "^3.3.1",
+    "express": "^5.2.1",
+    "geist": "^1.7.2",
     "lucide-react": "^0.323.0",
     "next": "14.1.0",
     "next-themes": "^0.4.6",
@@ -33,17 +39,26 @@
     "remark-gfm": "^4.0.1",
     "swr": "^2.2.4",
     "tailwind-merge": "^2.2.1",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "uuid": "^14.0.0",
+    "ws": "^8.21.0"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.0.1",
     "eslint": "^8",
     "eslint-config-next": "14.1.0",
+    "pg": "^8.21.0",
     "postcss": "^8",
     "tailwindcss": "^3.3.0",
     "typescript": "^5"
+  },
+  "optionalDependencies": {
+    "bufferutil": "^4.1.0",
+    "utf-8-validate": "^6.0.6"
   }
 }

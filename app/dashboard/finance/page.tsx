@@ -6,11 +6,12 @@ import { TopBar } from "@/components/layout/TopBar";
 import { MetricCard } from "@/components/cards/MetricCard";
 import { DataTable } from "@/components/tables/DataTable";
 import { formatRupiahShort, formatRupiah, formatPct, formatPeriode } from "@/lib/formatters";
-import { LemoraxPieChart } from "@/components/charts/PieChart";
+import { AriesPieChart } from "@/components/charts/PieChart";
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, Legend, Cell, ReferenceLine
 } from "recharts";
+import { CHART_PRIMARY, CHART_SECONDARY, CHART_MUTED, CHART_AXIS, CHART_GRID } from "@/lib/brand";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -52,8 +53,8 @@ export default function FinancePage() {
       key: "tipe", label: "Tipe",
       render: (r: any) => (
         <span className="badge" style={{
-          background: r.tipe === "Pemasukan" ? "rgba(20,184,166,0.15)" : "rgba(239,68,68,0.15)",
-          color: r.tipe === "Pemasukan" ? "#14B8A6" : "#EF4444",
+          background: r.tipe === "Pemasukan" ? "rgba(22,82,240,0.12)" : "rgba(148,163,184,0.2)",
+          color: r.tipe === "Pemasukan" ? CHART_PRIMARY : CHART_SECONDARY,
           borderColor: "transparent"
         }}>{r.tipe}</span>
       )
@@ -63,7 +64,7 @@ export default function FinancePage() {
     {
       key: "jumlah", label: "Jumlah", sortable: true, align: "right" as const,
       render: (r: any) => (
-        <span style={{ fontFamily: "var(--font-jetbrains-mono)", color: r.tipe === "Pemasukan" ? "#14B8A6" : "#EF4444" }}>
+        <span style={{ color: r.tipe === "Pemasukan" ? CHART_PRIMARY : CHART_SECONDARY }}>
           {r.tipe === "Pemasukan" ? "+" : "-"}{formatRupiah(r.jumlah)}
         </span>
       )
@@ -82,7 +83,7 @@ export default function FinancePage() {
 
         {/* P&L Chart */}
         <div className="card-base p-5">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)", fontFamily: "var(--font-sora)" }}>
+          <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
             Profit & Loss Trend
           </h3>
           {isLoading ? <div className="skeleton h-64 rounded-xl" /> : (
@@ -90,19 +91,19 @@ export default function FinancePage() {
               <AreaChart data={data?.monthlyPL || []} margin={{ top: 5, right: 20, left: 10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gRev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#14B8A6" stopOpacity={0.2} /><stop offset="95%" stopColor="#14B8A6" stopOpacity={0} />
+                    <stop offset="5%" stopColor={CHART_PRIMARY} stopOpacity={0.2} /><stop offset="95%" stopColor={CHART_PRIMARY} stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="gExp" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#EF4444" stopOpacity={0.15} /><stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
+                    <stop offset="5%" stopColor={CHART_SECONDARY} stopOpacity={0.2} /><stop offset="95%" stopColor={CHART_SECONDARY} stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(31,42,61,0.8)" vertical={false} />
-                <XAxis dataKey="periode" tickFormatter={formatPeriode} tick={{ fill: "#475569", fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tickFormatter={formatRupiahShort} tick={{ fill: "#475569", fontSize: 11 }} axisLine={false} tickLine={false} width={72} />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} vertical={false} />
+                <XAxis dataKey="periode" tickFormatter={formatPeriode} tick={{ fill: CHART_AXIS, fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tickFormatter={formatRupiahShort} tick={{ fill: CHART_AXIS, fontSize: 11 }} axisLine={false} tickLine={false} width={72} />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend wrapperStyle={{ fontSize: "12px", color: "#94A3B8" }} />
-                <Area type="monotone" dataKey="revenue" name="Pemasukan" stroke="#14B8A6" strokeWidth={2} fill="url(#gRev)" />
-                <Area type="monotone" dataKey="expense" name="Pengeluaran" stroke="#EF4444" strokeWidth={2} fill="url(#gExp)" />
+                <Legend wrapperStyle={{ fontSize: "12px", color: CHART_MUTED }} />
+                <Area type="monotone" dataKey="revenue" name="Pemasukan" stroke={CHART_PRIMARY} strokeWidth={2} fill="url(#gRev)" />
+                <Area type="monotone" dataKey="expense" name="Pengeluaran" stroke={CHART_SECONDARY} strokeWidth={2} strokeDasharray="4 3" fill="url(#gExp)" />
               </AreaChart>
             </ResponsiveContainer>
           )}
@@ -111,28 +112,28 @@ export default function FinancePage() {
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           {/* Expense Breakdown */}
           <div className="card-base p-5">
-            <h3 className="text-sm font-semibold mb-2" style={{ color: "var(--text-primary)", fontFamily: "var(--font-sora)" }}>
+            <h3 className="text-sm font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
               Breakdown Pengeluaran per Kategori
             </h3>
-            <LemoraxPieChart data={expenseChartData} loading={isLoading} donut formatter={formatRupiah} height={260} />
+            <AriesPieChart data={expenseChartData} loading={isLoading} donut formatter={formatRupiah} height={260} />
           </div>
 
           {/* Monthly Cashflow */}
           <div className="card-base p-5">
-            <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)", fontFamily: "var(--font-sora)" }}>
+            <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
               Monthly Cashflow (Net)
             </h3>
             {isLoading ? <div className="skeleton h-56 rounded-xl" /> : (
               <ResponsiveContainer width="100%" height={224}>
                 <BarChart data={data?.monthlyPL || []} margin={{ top: 5, right: 20, left: 10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(31,42,61,0.8)" vertical={false} />
-                  <XAxis dataKey="periode" tickFormatter={formatPeriode} tick={{ fill: "#475569", fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis tickFormatter={formatRupiahShort} tick={{ fill: "#475569", fontSize: 11 }} axisLine={false} tickLine={false} width={72} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} vertical={false} />
+                  <XAxis dataKey="periode" tickFormatter={formatPeriode} tick={{ fill: CHART_AXIS, fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis tickFormatter={formatRupiahShort} tick={{ fill: CHART_AXIS, fontSize: 11 }} axisLine={false} tickLine={false} width={72} />
                   <Tooltip content={<CustomTooltip />} />
-                  <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" />
+                  <ReferenceLine y={0} stroke={CHART_GRID} />
                   <Bar dataKey="net" name="Net Profit" radius={[4,4,0,0]} maxBarSize={32}>
                     {(data?.monthlyPL || []).map((row: any, i: number) => (
-                      <Cell key={i} fill={row.net >= 0 ? "#14B8A6" : "#EF4444"} fillOpacity={0.85} />
+                      <Cell key={i} fill={row.net >= 0 ? CHART_PRIMARY : CHART_SECONDARY} fillOpacity={row.net >= 0 ? 0.9 : 0.75} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -149,14 +150,14 @@ export default function FinancePage() {
                 Ringkasan {y.year}
               </p>
               {[
-                ["Total Revenue", formatRupiahShort(y.revenue || 0), "#14B8A6"],
-                ["Total Expense", formatRupiahShort(y.expense || 0), "#EF4444"],
-                ["Net Profit", formatRupiahShort(y.net || 0), (y.net || 0) >= 0 ? "#14B8A6" : "#EF4444"],
-                ["Margin", formatPct(y.margin || 0), "#3B82F6"],
+                ["Total Revenue", formatRupiahShort(y.revenue || 0), CHART_PRIMARY],
+                ["Total Expense", formatRupiahShort(y.expense || 0), CHART_SECONDARY],
+                ["Net Profit", formatRupiahShort(y.net || 0), (y.net || 0) >= 0 ? CHART_PRIMARY : CHART_SECONDARY],
+                ["Margin", formatPct(y.margin || 0), CHART_PRIMARY],
               ].map(([label, value, color], j) => (
                 <div key={j} className="flex justify-between py-1.5 text-xs border-b last:border-0" style={{ borderColor: "var(--border)" }}>
                   <span style={{ color: "var(--text-muted)" }}>{label}</span>
-                  <span style={{ color: color as string, fontFamily: "var(--font-jetbrains-mono)" }}>{value}</span>
+                  <span style={{ color: color as string,  }}>{value}</span>
                 </div>
               ))}
             </div>
@@ -165,7 +166,7 @@ export default function FinancePage() {
 
         {/* Finance Table */}
         <div className="card-base p-5">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)", fontFamily: "var(--font-sora)" }}>
+          <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
             Semua Transaksi Keuangan
           </h3>
           <DataTable

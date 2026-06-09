@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   ResponsiveContainer,
   PieChart,
@@ -8,6 +9,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import { getCategoricalColor } from "@/lib/brand";
 
 interface PieData {
   name: string;
@@ -15,18 +17,13 @@ interface PieData {
   color?: string;
 }
 
-interface LemoraxPieChartProps {
+interface AriesPieChartProps {
   data: PieData[];
   loading?: boolean;
   donut?: boolean;
   formatter?: (value: number) => string;
   height?: number;
 }
-
-const DEFAULT_COLORS = [
-  "#14B8A6","#3B82F6","#8B5CF6","#F59E0B","#EF4444",
-  "#06B6D4","#10B981","#F97316","#EC4899","#6366F1",
-];
 
 const CustomTooltip = ({ active, payload, formatter }: any) => {
   if (!active || !payload?.length) return null;
@@ -52,20 +49,31 @@ const CustomTooltip = ({ active, payload, formatter }: any) => {
   );
 };
 
-export function LemoraxPieChart({
+export function AriesPieChart({
   data,
   loading,
   donut = false,
   formatter,
   height = 240,
-}: LemoraxPieChartProps) {
+}: AriesPieChartProps) {
+  const chartData = useMemo(() => {
+    const sorted = [...data].sort((a, b) => b.value - a.value);
+    const allFixed = sorted.length > 0 && sorted.every((d) => d.color);
+    return sorted.map((entry, i) => ({
+      ...entry,
+      fill: allFixed
+        ? entry.color!
+        : getCategoricalColor(i, sorted.length),
+    }));
+  }, [data]);
+
   if (loading) return <div className="skeleton w-full rounded-xl" style={{ height }} />;
 
   return (
     <ResponsiveContainer width="100%" height={height}>
       <PieChart>
         <Pie
-          data={data}
+          data={chartData}
           cx="50%"
           cy="45%"
           innerRadius={donut ? "45%" : 0}
@@ -74,17 +82,13 @@ export function LemoraxPieChart({
           dataKey="value"
           strokeWidth={0}
         >
-          {data.map((entry, i) => (
-            <Cell
-              key={i}
-              fill={entry.color || DEFAULT_COLORS[i % DEFAULT_COLORS.length]}
-              fillOpacity={0.9}
-            />
+          {chartData.map((entry, i) => (
+            <Cell key={i} fill={entry.fill} fillOpacity={0.92} />
           ))}
         </Pie>
         <Tooltip content={<CustomTooltip formatter={formatter} />} />
         <Legend
-          wrapperStyle={{ fontSize: "11px", color: "#94A3B8" }}
+          wrapperStyle={{ fontSize: "11px", color: "var(--text-muted)" }}
           iconSize={10}
           iconType="circle"
         />

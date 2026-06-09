@@ -8,23 +8,20 @@ import { DataTable } from "@/components/tables/DataTable";
 import { formatPct, getKPIStatusColor } from "@/lib/formatters";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell } from "recharts";
 import { CABANG_LIST } from "@/types";
+import { CHART_PRIMARY, CHART_SECONDARY, CHART_AXIS, CHART_GRID, getBucketColor, getHeatmapCellStyle } from "@/lib/brand";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 function HeatmapCell({ value }: { value: number }) {
-  const pct = Math.min(100, Math.max(0, value));
-  const r = pct < 75 ? 239 : pct < 100 ? 245 : 20;
-  const g = pct < 75 ? 68 : pct < 100 ? 158 : 184;
-  const b = pct < 75 ? 68 : pct < 100 ? 11 : 166;
-  const alpha = 0.15 + (pct / 100) * 0.5;
+  const { background, color } = getHeatmapCellStyle(value);
   return (
     <td
-      title={`${pct.toFixed(1)}%`}
-      className="border text-center text-[10px] font-mono cursor-default transition-all"
+      title={value > 0 ? `${value.toFixed(1)}%` : undefined}
+      className="border text-center text-[10px] font-sans font-bold cursor-default transition-all"
       style={{
-        background: `rgba(${r},${g},${b},${alpha})`,
+        background,
         borderColor: "var(--border)",
-        color: value > 0 ? "var(--text-secondary)" : "var(--text-muted)",
+        color,
         padding: "6px 4px",
         minWidth: "52px",
       }}
@@ -75,7 +72,7 @@ export default function KPIPage() {
     {
       key: "achievement_pct", label: "Achievement", sortable: true, align: "right" as const,
       render: (r: any) => (
-        <span style={{ fontFamily: "var(--font-jetbrains-mono)", color: (r.achievement_pct || 0) >= 100 ? "#14B8A6" : (r.achievement_pct || 0) >= 75 ? "#F59E0B" : "#EF4444" }}>
+        <span style={{ color: (r.achievement_pct || 0) >= 100 ? CHART_PRIMARY : (r.achievement_pct || 0) >= 75 ? CHART_SECONDARY : CHART_AXIS }}>
           {formatPct(r.achievement_pct)}
         </span>
       )
@@ -94,12 +91,12 @@ export default function KPIPage() {
     { label: "90-110%", min: 90, max: 110 },
     { label: "110%+", min: 110, max: Infinity },
   ];
-  const distData = distBuckets.map(({ label, min }) => {
+  const distData = distBuckets.map(({ label }, i) => {
     const bucketItem = (data?.distribution || []).find((d: any) => d.bucket === label);
     return {
       label,
       count: Number(bucketItem?.cnt || 0),
-      color: min < 50 ? "#EF4444" : min < 75 ? "#F97316" : min < 90 ? "#F59E0B" : min < 110 ? "#3B82F6" : "#14B8A6",
+      color: getBucketColor(i, distBuckets.length),
     };
   });
 
@@ -114,15 +111,15 @@ export default function KPIPage() {
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           {/* Distribution Histogram */}
           <div className="card-base p-5">
-            <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)", fontFamily: "var(--font-sora)" }}>
+            <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
               Distribusi Achievement
             </h3>
             {isLoading ? <div className="skeleton h-48 rounded-xl" /> : (
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={distData} margin={{ top: 5, right: 20, left: 10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(31,42,61,0.8)" vertical={false} />
-                  <XAxis dataKey="label" tick={{ fill: "#475569", fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: "#475569", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} vertical={false} />
+                  <XAxis dataKey="label" tick={{ fill: CHART_AXIS, fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: CHART_AXIS, fontSize: 11 }} axisLine={false} tickLine={false} />
                   <Tooltip contentStyle={{ background: "var(--bg-tertiary)", border: "1px solid var(--border)" }} />
                   <Bar dataKey="count" name="Karyawan" radius={[4,4,0,0]} maxBarSize={56}>
                     {distData.map((d, i) => <Cell key={i} fill={d.color} fillOpacity={0.85} />)}
@@ -134,16 +131,16 @@ export default function KPIPage() {
 
           {/* Top/Bottom 10 */}
           <div className="card-base p-5">
-            <h3 className="text-sm font-semibold mb-3" style={{ color: "var(--text-primary)", fontFamily: "var(--font-sora)" }}>
+            <h3 className="text-sm font-semibold mb-3" style={{ color: "var(--text-primary)" }}>
               Top 10 Performers
             </h3>
             {isLoading ? <div className="skeleton h-48 rounded-xl" /> : (
               <div className="space-y-1.5 max-h-48 overflow-y-auto scrollbar-thin">
                 {(data?.top10 || []).map((r: any, i: number) => (
                   <div key={i} className="flex items-center gap-2 text-xs py-1">
-                    <span className="w-5 text-center font-bold" style={{ color: i < 3 ? "#F59E0B" : "var(--text-muted)" }}>#{i+1}</span>
+                    <span className="w-5 text-center font-bold" style={{ color: i < 3 ? CHART_PRIMARY : "var(--text-muted)" }}>#{i+1}</span>
                     <span className="flex-1 truncate" style={{ color: "var(--text-secondary)" }}>{r.nama}</span>
-                    <span style={{ color: "#14B8A6", fontFamily: "var(--font-jetbrains-mono)" }}>{formatPct(r.achievement_pct)}</span>
+                    <span style={{ color: "#1652F0",  }}>{formatPct(r.achievement_pct)}</span>
                   </div>
                 ))}
               </div>
@@ -153,7 +150,7 @@ export default function KPIPage() {
 
         {/* Heatmap */}
         <div className="card-base p-5">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)", fontFamily: "var(--font-sora)" }}>
+          <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
             Achievement per Cabang (6 Bulan Terakhir)
           </h3>
           {isLoading ? <div className="skeleton h-64 rounded-xl" /> : (
@@ -186,7 +183,7 @@ export default function KPIPage() {
 
         {/* Individual KPI Table */}
         <div className="card-base p-5">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)", fontFamily: "var(--font-sora)" }}>
+          <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
             Detail KPI Karyawan
           </h3>
           <DataTable
@@ -196,7 +193,7 @@ export default function KPIPage() {
             searchable
             searchKeys={["nama", "cabang", "departemen", "employee_id"]}
             pageSize={25}
-            getRowStyle={(r) => r.status === "Below Target" ? { background: "rgba(239,68,68,0.04)" } : {}}
+            getRowStyle={(r) => r.status === "Below Target" ? { background: "rgba(148,163,184,0.08)" } : {}}
           />
         </div>
       </div>

@@ -12,10 +12,9 @@ import {
   AreaChart, Area, Cell
 } from "recharts";
 import { formatPeriode } from "@/lib/formatters";
+import { CHART_PRIMARY, CHART_SECONDARY, CHART_AXIS, CHART_GRID, CHART_MUTED, ATTENDANCE_COLORS, getChartColor } from "@/lib/brand";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
-
-const CABANG_COLORS = ["#14B8A6","#3B82F6","#8B5CF6","#F59E0B","#EF4444","#06B6D4","#10B981","#F97316","#EC4899","#6366F1","#84CC16","#0EA5E9"];
 
 export default function HRPage() {
   const { periodeStart, periodeEnd, cabang } = useFilters();
@@ -47,7 +46,7 @@ export default function HRPage() {
     {
       key: "kehadiran_pct", label: "Kehadiran %", sortable: true, align: "right" as const,
       render: (r: any) => (
-        <span style={{ fontFamily: "var(--font-jetbrains-mono)", color: (r.kehadiran_pct || 0) >= 90 ? "#14B8A6" : (r.kehadiran_pct || 0) >= 75 ? "#F59E0B" : "#EF4444" }}>
+        <span style={{ color: (r.kehadiran_pct || 0) >= 90 ? CHART_PRIMARY : (r.kehadiran_pct || 0) >= 75 ? CHART_SECONDARY : CHART_AXIS }}>
           {formatPct(r.kehadiran_pct)}
         </span>
       )
@@ -65,18 +64,18 @@ export default function HRPage() {
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           {/* Kehadiran per Cabang */}
           <div className="card-base p-5">
-            <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)", fontFamily: "var(--font-sora)" }}>
+            <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
               Kehadiran per Cabang
             </h3>
             {isLoading ? <div className="skeleton h-56 rounded-xl" /> : (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={[...(data?.kehadiranPerCabang || [])].sort((a: any, b: any) => b.pct - a.pct)} layout="vertical" margin={{ top: 0, right: 60, left: 10, bottom: 0 }}>
-                  <XAxis type="number" domain={[0,100]} tickFormatter={(v) => `${v}%`} tick={{ fill: "#475569", fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis type="category" dataKey="cabang" tick={{ fill: "#94A3B8", fontSize: 11 }} axisLine={false} tickLine={false} width={100} />
+                  <XAxis type="number" domain={[0,100]} tickFormatter={(v) => `${v}%`} tick={{ fill: CHART_AXIS, fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="cabang" tick={{ fill: CHART_MUTED, fontSize: 11 }} axisLine={false} tickLine={false} width={100} />
                   <Tooltip formatter={(v: any) => [`${Number(v).toFixed(1)}%`, "Kehadiran"]} contentStyle={{ background: "var(--bg-tertiary)", border: "1px solid var(--border)" }} />
                   <Bar dataKey="pct" radius={[0,4,4,0]} maxBarSize={20}>
-                    {(data?.kehadiranPerCabang || []).map((_: any, i: number) => (
-                      <Cell key={i} fill={CABANG_COLORS[i % CABANG_COLORS.length]} fillOpacity={0.85} />
+                    {[...(data?.kehadiranPerCabang || [])].sort((a: any, b: any) => b.pct - a.pct).map((_: any, i: number, arr: any[]) => (
+                      <Cell key={i} fill={getChartColor(i, arr.length)} fillOpacity={0.9} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -86,26 +85,26 @@ export default function HRPage() {
 
           {/* Absensi Trend */}
           <div className="card-base p-5">
-            <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)", fontFamily: "var(--font-sora)" }}>
+            <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
               Tren Absensi (12 Bulan)
             </h3>
             {isLoading ? <div className="skeleton h-56 rounded-xl" /> : (
               <ResponsiveContainer width="100%" height={220}>
                 <AreaChart data={data?.trend || []} margin={{ top: 5, right: 20, left: 10, bottom: 0 }}>
                   <defs>
-                    {[["hadir","#14B8A6"],["sakit","#3B82F6"],["izin","#F59E0B"],["alfa","#EF4444"]].map(([key, color]) => (
+                    {Object.entries(ATTENDANCE_COLORS).map(([key, color]) => (
                       <linearGradient key={key} id={`g-${key}`} x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor={color} stopOpacity={0.2} />
                         <stop offset="95%" stopColor={color} stopOpacity={0} />
                       </linearGradient>
                     ))}
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(31,42,61,0.8)" vertical={false} />
-                  <XAxis dataKey="periode" tickFormatter={formatPeriode} tick={{ fill: "#475569", fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: "#475569", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} vertical={false} />
+                  <XAxis dataKey="periode" tickFormatter={formatPeriode} tick={{ fill: CHART_AXIS, fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: CHART_AXIS, fontSize: 11 }} axisLine={false} tickLine={false} />
                   <Tooltip contentStyle={{ background: "var(--bg-tertiary)", border: "1px solid var(--border)" }} />
-                  {[["hadir","#14B8A6"],["sakit","#3B82F6"],["izin","#F59E0B"],["alfa","#EF4444"]].map(([key, color]) => (
-                    <Area key={key} type="monotone" dataKey={key} name={key.charAt(0).toUpperCase()+key.slice(1)} stroke={color} strokeWidth={1.5} fill={`url(#g-${key})`} />
+                  {Object.entries(ATTENDANCE_COLORS).map(([key, color]) => (
+                    <Area key={key} type="monotone" dataKey={key} name={key.charAt(0).toUpperCase()+key.slice(1)} stroke={color} strokeWidth={key === "hadir" ? 2 : 1.5} strokeDasharray={key === "hadir" ? undefined : "4 3"} fill={`url(#g-${key})`} />
                   ))}
                 </AreaChart>
               </ResponsiveContainer>
@@ -118,7 +117,7 @@ export default function HRPage() {
           <div className="card-base p-5">
             <div className="flex items-center gap-2 mb-4">
               <Gift size={15} color="#F59E0B" />
-              <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)", fontFamily: "var(--font-sora)" }}>
+              <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
                 Ulang Tahun Bulan Ini
               </h3>
             </div>
@@ -143,7 +142,7 @@ export default function HRPage() {
 
         {/* Attendance Table */}
         <div className="card-base p-5">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)", fontFamily: "var(--font-sora)" }}>
+          <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
             Detail Kehadiran Karyawan
           </h3>
           <DataTable
@@ -153,7 +152,7 @@ export default function HRPage() {
             searchable
             searchKeys={["nama", "cabang", "jabatan"]}
             pageSize={25}
-            getRowStyle={(r) => (r.kehadiran_pct || 0) < 75 ? { background: "rgba(239,68,68,0.04)" } : {}}
+            getRowStyle={(r) => (r.kehadiran_pct || 0) < 75 ? { background: "rgba(148,163,184,0.08)" } : {}}
           />
         </div>
       </div>

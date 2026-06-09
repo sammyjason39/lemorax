@@ -1,33 +1,15 @@
 import type { Metadata } from "next";
-import { Sora, DM_Sans, JetBrains_Mono } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 import { FilterProvider } from "@/contexts/FilterContext";
-
-const sora = Sora({
-  subsets: ["latin"],
-  variable: "--font-sora",
-  weight: ["300", "400", "500", "600", "700", "800"],
-});
-
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  variable: "--font-dm-sans",
-  weight: ["300", "400", "500", "600", "700"],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-jetbrains-mono",
-  weight: ["400", "500", "600"],
-});
+import { ThemeProvider } from "@/components/theme-provider";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 
 export const metadata: Metadata = {
-  title: "Lemorax BI Dashboard",
+  title: "ARIES — Business Intelligence",
   description:
-    "Business Intelligence Dashboard untuk PT Lemorax — monitoring seluruh kondisi bisnis secara real-time",
+    "ARIES Business Intelligence untuk PT Lemorax — monitoring kondisi bisnis secara real-time",
 };
-
-import { ThemeProvider } from "@/components/theme-provider";
 
 export default function RootLayout({
   children,
@@ -35,12 +17,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="id" suppressHydrationWarning>
+    <html lang="id" suppressHydrationWarning className={GeistSans.variable}>
       <body
-        className={`${sora.variable} ${dmSans.variable} ${jetbrainsMono.variable} font-dm antialiased`}
+        className={`${GeistSans.className} font-sans antialiased`}
       >
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-          <FilterProvider>{children}</FilterProvider>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+          <LanguageProvider>
+            <FilterProvider>{children}</FilterProvider>
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>

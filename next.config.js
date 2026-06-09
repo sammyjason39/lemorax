@@ -1,6 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {},
+  experimental: {
+    serverComponentsExternalPackages: ["ws", "bufferutil", "utf-8-validate"],
+  },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals = [...(config.externals || []), "ws", "bufferutil", "utf-8-validate"];
+    }
+    return config;
+  },
   transpilePackages: [
     "react-markdown",
     "remark-gfm",

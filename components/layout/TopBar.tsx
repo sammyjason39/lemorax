@@ -3,30 +3,29 @@
 import { useFilters } from "@/contexts/FilterContext";
 import { formatPeriode } from "@/lib/formatters";
 import { Calendar, Building2 } from "lucide-react";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { LanguageToggle } from "@/components/ui/LanguageToggle";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { brand } from "@/lib/brand";
 
 interface TopBarProps {
   title: string;
   subtitle?: string;
 }
 
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
-
 export function TopBar({ title, subtitle }: TopBarProps) {
   const { periodeStart, periodeEnd, cabang } = useFilters();
+  const { t } = useLanguage();
 
   return (
     <header
-      className="sticky top-0 z-30 flex items-center justify-between px-6 py-4 bg-opacity-90"
-      style={{
-        backgroundColor: "var(--bg-primary)",
-        backdropFilter: "blur(12px)",
-        borderBottom: "1px solid var(--border)",
-      }}
+      className="sticky top-0 z-30 flex items-center justify-between px-6 py-4 bg-[var(--bg-primary)]/95 backdrop-blur-md"
+      style={{ borderBottom: "1px solid var(--border)" }}
     >
       <div>
         <h1
-          className="text-lg font-bold"
-          style={{ fontFamily: "var(--font-sora)", color: "var(--text-primary)" }}
+          className="text-lg font-sans font-bold tracking-tight"
+          style={{ color: "var(--text-primary)", letterSpacing: "-0.02em" }}
         >
           {title}
         </h1>
@@ -39,7 +38,7 @@ export function TopBar({ title, subtitle }: TopBarProps) {
 
       <div className="flex items-center gap-3">
         <div
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium"
           style={{
             background: "var(--bg-secondary)",
             border: "1px solid var(--border)",
@@ -54,32 +53,26 @@ export function TopBar({ title, subtitle }: TopBarProps) {
 
         {cabang.length > 0 && (
           <div
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium"
             style={{
-              background: "rgba(59, 130, 246, 0.1)",
-              border: "1px solid rgba(59, 130, 246, 0.3)",
-              color: "#93C5FD",
+              background: brand.blueSoft,
+              border: "1px solid rgba(22, 82, 240, 0.15)",
+              color: brand.blue,
             }}
           >
             <Building2 size={13} />
             <span>
-              {cabang.length === 1 ? cabang[0] : `${cabang.length} Cabang`}
+              {cabang.length === 1 ? cabang[0] : `${cabang.length} ${t("global.branches")}`}
             </span>
           </div>
         )}
 
-        <div
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
-          style={{
-            background: "rgba(20, 184, 166, 0.1)",
-            border: "1px solid rgba(20, 184, 166, 0.2)",
-            color: "#14B8A6",
-          }}
-        >
-          <div className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
-          Live
+        <div className="live-badge">
+          <span className="pulse" />
+          {t("global.live")}
         </div>
-        
+
+        <LanguageToggle />
         <ThemeToggle />
       </div>
     </header>

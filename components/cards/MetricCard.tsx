@@ -8,6 +8,7 @@ import {
 } from "recharts";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { formatPct } from "@/lib/formatters";
+import { brand } from "@/lib/brand";
 
 interface MetricCardProps {
   title: string;
@@ -26,14 +27,7 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
   return (
     <ResponsiveContainer width="100%" height={36}>
       <LineChart data={chartData} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
-        <Line
-          type="monotone"
-          dataKey="v"
-          stroke={color}
-          strokeWidth={1.5}
-          dot={false}
-          isAnimationActive={false}
-        />
+        <Line type="monotone" dataKey="v" stroke={color} strokeWidth={1.5} dot={false} isAnimationActive={false} />
         <Tooltip content={() => null} />
       </LineChart>
     </ResponsiveContainer>
@@ -46,7 +40,7 @@ export function MetricCard({
   delta,
   deltaLabel,
   sparklineData,
-  sparklineColor = "#14B8A6",
+  sparklineColor = brand.blue,
   icon,
   loading = false,
   className = "",
@@ -67,24 +61,17 @@ export function MetricCard({
   return (
     <div className={`card-hover p-5 group ${className}`}>
       <div className="flex items-start justify-between mb-1">
-        <p className="text-xs font-medium tracking-wide" style={{ color: "var(--text-muted)" }}>
+        <p className="label-mono" style={{ color: "var(--text-muted)" }}>
           {title}
         </p>
-        {icon && (
-          <div className="opacity-60 group-hover:opacity-100 transition-opacity">
-            {icon}
-          </div>
-        )}
+        {icon && <div className="opacity-60 group-hover:opacity-100 transition-opacity">{icon}</div>}
       </div>
 
       <div className="flex items-end justify-between gap-2">
         <div className="flex-1">
           <p
-            className="text-2xl font-semibold tracking-tight leading-none mt-1"
-            style={{
-              fontFamily: "var(--font-jetbrains-mono)",
-              color: "var(--text-primary)",
-            }}
+            className="text-2xl font-extrabold tracking-tight leading-none mt-1 font-tabular"
+            style={{ color: "var(--text-primary)" }}
           >
             {value}
           </p>
@@ -95,20 +82,14 @@ export function MetricCard({
                 className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] font-semibold"
                 style={{
                   background: isPositive
-                    ? "rgba(20,184,166,0.12)"
+                    ? brand.blueSoft
                     : isNegative
-                    ? "rgba(239,68,68,0.12)"
-                    : "rgba(148,163,184,0.12)",
-                  color: isPositive ? "#14B8A6" : isNegative ? "#EF4444" : "#94A3B8",
+                    ? "rgba(239,68,68,0.1)"
+                    : "rgba(107,114,128,0.1)",
+                  color: isPositive ? brand.blue : isNegative ? brand.danger : brand.muted,
                 }}
               >
-                {isPositive ? (
-                  <TrendingUp size={10} />
-                ) : isNegative ? (
-                  <TrendingDown size={10} />
-                ) : (
-                  <Minus size={10} />
-                )}
+                {isPositive ? <TrendingUp size={10} /> : isNegative ? <TrendingDown size={10} /> : <Minus size={10} />}
                 {isPositive ? "+" : ""}
                 {formatPct(delta)}
               </div>
