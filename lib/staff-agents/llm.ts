@@ -2,6 +2,8 @@ import type { StaffAgent, StaffMessage } from "@/lib/staff-agents/types";
 import { buildStaffAgentSystemPrompt, formatConversationHistory } from "@/lib/staff-agents/prompt";
 import { generateSQLQuery, streamFinalAnswer } from "@/lib/openrouter";
 import { queryBusinessData } from "@/lib/agents/query-business-data";
+import { shouldRouteToComposio } from "@/lib/composio/config";
+import { streamComposioStaffReply } from "@/lib/staff-agents/composio-runner";
 import { PRINCIPAL_NAME } from "@/lib/brand";
 
 function getQwenApiUrl(): string {
@@ -42,6 +44,16 @@ export async function* streamStaffAgentReply(
   history: StaffMessage[],
   team?: StaffAgent[]
 ): AsyncGenerator<string> {
+  if (shouldRouteToComposio(userMessage)) {
+    try {
+      yield* streamComposioStaffReply(agent, userMessage, history, team);
+      return;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Composio error";
+      yield `⚠️ Composio: ${msg}\n\n(Mencoba jawab via Qwen…)\n\n`;
+    }
+  }
+
   const apiKey = getQwenApiKey();
   const systemPrompt = buildStaffAgentSystemPrompt(agent, team);
   const historyText = formatConversationHistory(history, agent.id, team);

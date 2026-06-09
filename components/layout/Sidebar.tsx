@@ -15,6 +15,7 @@ import {
   Check,
   RotateCcw,
   UsersRound,
+  LayoutGrid,
 } from "lucide-react";
 import { useFilters } from "@/contexts/FilterContext";
 import { useState } from "react";
@@ -44,6 +45,12 @@ const NAV_ITEMS: { href: string; labelKey: TranslationKey; icon: any; badge?: st
     labelKey: "menu.ai_staff",
     icon: UsersRound,
     badge: "A2A",
+  },
+  {
+    href: "/dashboard/workspace",
+    labelKey: "menu.workspace",
+    icon: LayoutGrid,
+    badge: "GCal",
   },
 ];
 

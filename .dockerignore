@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.env
+.env.local
+.env*.local
+*.md
+docs
+.claude
+.agents
+_bmad
+conextlab-brand-system*
+~$*

@@ -1,11 +1,25 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: "standalone",
   experimental: {
-    serverComponentsExternalPackages: ["ws", "bufferutil", "utf-8-validate"],
+    serverComponentsExternalPackages: [
+      "ws",
+      "bufferutil",
+      "utf-8-validate",
+      "node-ical",
+      "@composio/core",
+    ],
   },
   webpack: (config, { isServer }) => {
     if (isServer) {
-      config.externals = [...(config.externals || []), "ws", "bufferutil", "utf-8-validate"];
+      config.externals = [
+        ...(config.externals || []),
+        "ws",
+        "bufferutil",
+        "utf-8-validate",
+        "node-ical",
+        "@composio/core",
+      ];
     }
     return config;
   },

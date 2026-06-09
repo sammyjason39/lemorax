@@ -3,6 +3,7 @@
 import { Plus, MessageCircle, Settings2, CalendarClock, Loader2 } from "lucide-react";
 import type { StaffAgent, StaffConversation } from "@/lib/staff-agents/types";
 import { AgentAvatar, GroupAvatar } from "@/components/staff-agents/AgentAvatar";
+import { ComposioConnectPanel } from "@/components/staff-agents/ComposioConnectPanel";
 import { getChatLabel } from "@/lib/staff-agents/names";
 import { brand } from "@/lib/brand";
 
@@ -189,6 +190,10 @@ export function ConversationSidebar({
           })}
         </div>
       )}
+
+      <div className="mt-auto">
+        <ComposioConnectPanel />
+      </div>
     </div>
   );
 }

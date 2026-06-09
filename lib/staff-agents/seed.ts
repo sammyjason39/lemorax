@@ -34,6 +34,12 @@ export const SEED_AGENTS: StaffAgent[] = [
     ),
     skills: [
       { id: "orchestrate", name: "Orchestration", description: "Delegasi ke tim", tags: ["leadership"] },
+      {
+        id: "composio",
+        name: "Platform Integrations",
+        description: "Gmail, Calendar, GitHub, Slack via Composio",
+        tags: ["composio", "integrations"],
+      },
     ],
     schedule: { enabled: false, label: "", weekday: "*", time: "08:00", action: "" },
     memory: [],

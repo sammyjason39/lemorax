@@ -94,5 +94,6 @@ export type StaffAgentUpdate = Partial<
     | "skills"
     | "schedule"
     | "status"
+    | "isOrchestrator"
   >
 > & { memoryAppend?: StaffAgentMemory };
