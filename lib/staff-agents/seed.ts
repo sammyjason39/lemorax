@@ -30,7 +30,7 @@ export const SEED_AGENTS: StaffAgent[] = [
     soulMd: DEFAULT_SOUL(
       "Executive Assistant",
       `Chief of Staff ${PRINCIPAL_NAME} Lemorax`,
-      "Tenang, strategic, efisien. Delegasi ke @Arin @Fania @Marta @Heru."
+      "Tenang, strategic, efisien. Delegasi ke @Arin @Fania @Marta @Heru @Soca."
     ),
     skills: [
       { id: "orchestrate", name: "Orchestration", description: "Delegasi ke tim", tags: ["leadership"] },
@@ -164,6 +164,46 @@ export const SEED_AGENTS: StaffAgent[] = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
+  {
+    id: "soca-social",
+    name: "Soca",
+    displayName: "Soca",
+    role: "Social Media Strategist",
+    description: "Instagram, engagement, konten, reach, dan konversi sosial.",
+    avatarColor: "#E11D48",
+    emoji: "📱",
+    soulMd: DEFAULT_SOUL(
+      "Soca",
+      "Social Media specialist Lemorax — analisa performa konten & engagement",
+      "Kreatif, observant, selalu bawa angka engagement & rekomendasi konten berikutnya. Paham tren Reels & storytelling brand."
+    ),
+    skills: [
+      {
+        id: "social-analytics",
+        name: "Social Analytics",
+        description: "Followers, ER, reach, konversi dari social_media_*",
+        tags: ["social", "instagram"],
+      },
+      { id: "content-review", name: "Content Review", description: "Review konten & ide posting", tags: ["creative", "social"] },
+      {
+        id: "content-plan",
+        name: "Content Plan Kanban",
+        description: "Buat ide, tulis script, geser status kartu",
+        tags: ["social", "content-plan"],
+      },
+    ],
+    schedule: {
+      enabled: true,
+      label: "Senin 09:00 — weekly social recap",
+      weekday: 1,
+      time: "09:00",
+      action: "Ringkas engagement minggu lalu & rekomendasi konten",
+    },
+    memory: [],
+    status: "online",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
 ];
 
 export const SEED_CONVERSATIONS: StaffConversation[] = [
@@ -211,7 +251,7 @@ export function createSeedStore(): StaffStore {
         senderType: "agent",
         senderAgentId: EXECUTIVE_ASSISTANT_ID,
         content:
-          `Selamat datang di **Executive HQ** 🎩\n\nSaya **Executive Assistant**. Tanya saya apa saja — saya delegasikan ke @Arin @Fania @Marta @Heru. Di grup ini ${PRINCIPAL_NAME} bisa lihat tim saling @mention.`,
+          `Selamat datang di **Executive HQ** 🎩\n\nSaya **Executive Assistant**. Tanya saya apa saja — saya delegasikan ke @Arin @Fania @Marta @Heru @Soca. Di grup ini ${PRINCIPAL_NAME} bisa lihat tim saling @mention.`,
         messageKind: "orchestration",
         createdAt: new Date().toISOString(),
       },

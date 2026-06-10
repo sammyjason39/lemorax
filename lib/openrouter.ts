@@ -30,6 +30,9 @@ DATABASE SCHEMA (PostgreSQL - Supabase):
 5. crm: deal_id (PK), periode, nama_perusahaan, tipe_bisnis, kota, cabang_handler, account_manager, am_employee_id, nama_owner, jabatan_owner, no_hp_owner, email_owner, tanggal_lahir_owner, nilai_deal, status (Closed Won/Closed Lost/Negotiation/Proposal/Prospecting), produk_utama, frekuensi_order, last_follow_up, tanggal_closed, notes
 6. finance: periode, cabang, tipe (Pemasukan/Pengeluaran), kategori, keterangan, jumlah, metode_pembayaran, referensi
 7. marketing: periode, campaign_name, channel, target_audience, budget, spend, impressions, clicks, ctr_pct, conversions, conv_rate_pct, revenue_generated, roas, cpl, status
+8. social_media_profiles: id (PK), platform, username, display_name, followers, following, posts_count, engagement_rate, conversion_rate, profile_views, link_clicks, conversions, bio, synced_at
+9. social_media_posts: id (PK), profile_id (FK), platform, caption, media_type, published_at, likes, comments, shares, saves, reach, impressions, engagement_rate, clicks, conversions
+10. content_plan_items: id (PK), title, brand_scope (personal|company), status (backlog|scripting|review|scheduled|published), format (reel|carousel|image|story), script_md, notes, scheduled_at, published_at, publish_mode, assigned_agent, created_by, position
 
 
 FORMAT ANGKA dalam jawaban final:

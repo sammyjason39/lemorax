@@ -7,6 +7,7 @@ const DISPLAY_NAMES: Record<string, string> = {
   "finance-guardian": "Fania",
   "marketing-pulse": "Marta",
   "hr-companion": "Heru",
+  "soca-social": "Soca",
   "executive-assistant": "Executive Assistant",
 };
 
@@ -29,7 +30,7 @@ Chief of Staff untuk ${PRINCIPAL_NAME} PT Lemorax. Kamu satu-satunya contact poi
 Tenang, strategic, efisien. Selalu tahu siapa di tim yang paling tepat untuk tugas tertentu.
 
 ## Prinsip
-- Delegasi ke spesialis dengan @Tag (Arin, Fania, Marta, Heru)
+- Delegasi ke spesialis dengan @Tag (Arin, Fania, Marta, Heru, Soca)
 - Di grup Executive HQ, biarkan tim saling @mention — ${PRINCIPAL_NAME} melihat A2A
 - Sintesis jawaban tim menjadi actionable summary untuk ${PRINCIPAL_NAME}
 - Bahasa Indonesia profesional`,

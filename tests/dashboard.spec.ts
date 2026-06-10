@@ -29,6 +29,7 @@ test.describe('Layout & Navigation', () => {
       'CRM & Deals',
       'Finance',
       'Marketing',
+      'Social Media',
       'AI Analyst',
     ];
 
@@ -56,6 +57,7 @@ test.describe('Layout & Navigation', () => {
       { url: '/dashboard/crm', title: 'CRM & Deals' },
       { url: '/dashboard/finance', title: 'Finance' },
       { url: '/dashboard/marketing', title: 'Marketing' },
+      { url: '/dashboard/social-media', title: 'Social Media' },
       { url: '/dashboard/ai-analyst', title: 'AI Analyst' },
     ];
 

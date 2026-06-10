@@ -13,6 +13,10 @@
     "seed:extend:dry": "node scripts/seed-extend-data.mjs --dry-run",
     "setup:vault-supabase": "node scripts/setup-vault-supabase.mjs",
     "seed:vault": "node scripts/seed-vault-starter.mjs",
+    "setup:social-supabase": "node scripts/setup-social-media.mjs",
+    "seed:social": "node scripts/seed-social-media.mjs",
+    "setup:content-plan": "node scripts/setup-content-plan.mjs",
+    "seed:content-plan": "node scripts/seed-content-plan.mjs",
     "test:e2e": "playwright test"
   },
   "dependencies": {

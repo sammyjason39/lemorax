@@ -10,6 +10,7 @@ import {
   Handshake,
   DollarSign,
   Megaphone,
+  Share2,
   Bot,
   ChevronDown,
   Check,
@@ -40,6 +41,7 @@ const NAV_ITEMS: { href: string; labelKey: TranslationKey; icon: any; badge?: st
   { href: "/dashboard/crm", labelKey: "menu.crm", icon: Handshake },
   { href: "/dashboard/finance", labelKey: "menu.finance", icon: DollarSign },
   { href: "/dashboard/marketing", labelKey: "menu.marketing", icon: Megaphone },
+  { href: "/dashboard/social-media", labelKey: "menu.social_media", icon: Share2 },
   {
     href: "/dashboard/ai-analyst",
     labelKey: "menu.ai",

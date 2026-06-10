@@ -6,6 +6,9 @@ export const ALLOWED_TABLES = [
   "crm",
   "finance",
   "marketing",
+  "social_media_profiles",
+  "social_media_posts",
+  "content_plan_items",
 ] as const;
 
 export type AllowedTable = (typeof ALLOWED_TABLES)[number];

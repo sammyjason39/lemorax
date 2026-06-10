@@ -9,6 +9,9 @@ import type { StaffStreamChunk } from "@/lib/staff-agents/stream";
 import { isTextChunk } from "@/lib/staff-agents/stream";
 import { getAgentSkillPromptBlock } from "@/lib/staff-agents/skills/registry";
 import { getVaultContextForQuery } from "@/lib/vault/store";
+import { getSocialContextForAgent } from "@/lib/social-media/store";
+import { getContentPlanContextForAgent } from "@/lib/content-plan/store";
+import { CONTENT_PLAN_KEYWORDS, runSocaContentPlanTools } from "@/lib/content-plan/soca-runner";
 
 function getQwenApiUrl(): string {
   const base = process.env.QWEN_API_BASE_URL?.replace(/\/$/, "");
@@ -27,6 +30,9 @@ const MODEL = process.env.QWEN_MODEL || "qwen3.7-plus";
 const DATA_KEYWORDS =
   /\b(cabang|sales|revenue|omset|kpi|profit|crm|deal|marketing|finance|absensi|karyawan|transaksi|berapa|total|data|laporan)\b/i;
 
+const SOCIAL_KEYWORDS =
+  /\b(instagram|ig|social|sosmed|engagement|follower|followers|reach|impression|konten|posting|reels|tiktok|soca|konversi sosial|like|komentar|content plan|ide konten|script|kanban|caption)\b/i;
+
 const VAULT_KEYWORDS =
   /\b(mom|minutes|meeting|rapat|dokumen|document|vault|notulen|sop|policy|kebijakan|obsidian)\b|\[\[/i;
 
@@ -42,6 +48,19 @@ async function buildPromptExtras(agent: StaffAgent, userMessage: string) {
 
 function agentHasSqlSkill(agent: StaffAgent): boolean {
   return agent.skills.some((s) => s.id === "sql" || s.tags.includes("data"));
+}
+
+function agentHasSocialSkill(agent: StaffAgent): boolean {
+  return (
+    agent.id === "soca-social" ||
+    agent.skills.some(
+      (s) =>
+        s.tags.includes("social") ||
+        s.tags.includes("content-plan") ||
+        s.id === "social-analytics" ||
+        s.id === "content-plan"
+    )
+  );
 }
 
 async function runSqlPipeline(userMessage: string): Promise<{ data: unknown; sql: string }> {
@@ -83,6 +102,38 @@ export async function* streamStaffAgentReply(
       dataContext = `\n\nData hasil query:\n\`\`\`sql\n${sql}\n\`\`\`\n${JSON.stringify(data, null, 2).slice(0, 12000)}`;
     } catch {
       dataContext = "\n\n(Catatan: query data gagal — jawab berdasarkan pengetahuan umum bisnis.)";
+    }
+  }
+
+  if (agentHasSocialSkill(agent) && SOCIAL_KEYWORDS.test(userMessage)) {
+    try {
+      const [socialBlock, planBlock] = await Promise.all([
+        getSocialContextForAgent(),
+        getContentPlanContextForAgent(),
+      ]);
+      if (socialBlock) dataContext += `\n\n${socialBlock}`;
+      if (planBlock) dataContext += `\n\n${planBlock}`;
+
+      if (
+        agent.id === "soca-social" &&
+        (CONTENT_PLAN_KEYWORDS.test(userMessage) ||
+          /\b(buat|buatkan|tulis|geser|pindah|ide|script)\b/i.test(userMessage))
+      ) {
+        const { toolResults, replyHint } = await runSocaContentPlanTools(userMessage);
+        if (toolResults.length) {
+          dataContext += `\n\n## Aksi Content Plan (eksekusi otomatis)\n${toolResults.join("\n")}`;
+          if (replyHint) dataContext += `\n(Petunjuk respons: ${replyHint})`;
+        }
+      }
+
+      if (!agentHasSqlSkill(agent) || !DATA_KEYWORDS.test(userMessage)) {
+        const { data, sql } = await runSqlPipeline(
+          `${userMessage} — gunakan tabel social_media_profiles, social_media_posts, content_plan_items`
+        );
+        dataContext += `\n\nData SQL social media:\n\`\`\`sql\n${sql}\n\`\`\`\n${JSON.stringify(data, null, 2).slice(0, 8000)}`;
+      }
+    } catch {
+      dataContext += "\n\n(Catatan: data social media belum tersedia — sarankan sync di halaman Social Media.)";
     }
   }
 

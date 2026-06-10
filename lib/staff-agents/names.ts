@@ -16,6 +16,7 @@ const CHAT_ROLE_SHORT: Record<string, string> = {
   "finance-guardian": "Finance",
   "marketing-pulse": "Marketing",
   "hr-companion": "HR",
+  "soca-social": "Social",
 };
 
 /** Label shown in chat bubbles, e.g. "Heru - HR" */
