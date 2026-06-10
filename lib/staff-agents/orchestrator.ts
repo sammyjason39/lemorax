@@ -17,8 +17,8 @@ import {
   getConversation,
   listAgents,
   listMessages,
-  updateAgent,
 } from "@/lib/staff-agents/store";
+import { appendAgentMemory } from "@/lib/staff-agents/memory";
 import { streamStaffAgentReply, collectStaffAgentReply } from "@/lib/staff-agents/llm";
 import type { StaffChatSSEEvent } from "@/lib/staff-agents/chat";
 import { sanitizeAgentContent } from "@/lib/staff-agents/stream";
@@ -97,14 +97,11 @@ async function* streamAndSaveAgentReply(params: {
 
   yield { type: "agent_message", message };
 
-  await updateAgent(agent.id, {
-    memoryAppend: {
-      id: `mem_${Date.now()}`,
-      content: `[${messageKind ?? "chat"}] ${prompt.slice(0, 80)} → ${full.slice(0, 220)}`,
-      createdAt: new Date().toISOString(),
-      source: "conversation",
-    },
-  });
+  await appendAgentMemory(
+    agent.id,
+    `[${messageKind ?? "chat"}] ${prompt.slice(0, 80)} → ${full.slice(0, 220)}`,
+    "conversation"
+  );
 
   return message;
 }
@@ -163,6 +160,11 @@ export async function* runOrchestratedConversationChat(
     mentions: parseMentions(eaOpening, allAgents),
   });
   yield { type: "agent_message", message: eaOpenMsg };
+  await appendAgentMemory(
+    ea.id,
+    `[orchestration-open] ${userText.slice(0, 100)} → ${eaOpening.slice(0, 200)}`,
+    "conversation"
+  );
   history = [...history, eaOpenMsg];
 
   // Re-enrich delegations from EA opening @mentions
@@ -261,6 +263,11 @@ Ringkas jawaban tim untuk ${PRINCIPAL_NAME}. Sebut kontributor dengan @Tag. Max 
       mentions: parseMentions(closing, allAgents),
     });
     yield { type: "agent_message", message: closeMsg };
+    await appendAgentMemory(
+      ea.id,
+      `[orchestration-close] ${userText.slice(0, 100)} → ${closing.slice(0, 200)}`,
+      "conversation"
+    );
   }
 
   yield { type: "done" };

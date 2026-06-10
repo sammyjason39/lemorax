@@ -1,4 +1,5 @@
-import { getAgent, appendMessage, updateAgent, listMessages } from "@/lib/staff-agents/store";
+import { getAgent, appendMessage, listMessages } from "@/lib/staff-agents/store";
+import { appendAgentMemory } from "@/lib/staff-agents/memory";
 import { getConversation } from "@/lib/staff-agents/store";
 import { streamStaffAgentReply } from "@/lib/staff-agents/llm";
 import { isOrchestratedConversation, runOrchestratedConversationChat } from "@/lib/staff-agents/orchestrator";
@@ -72,14 +73,11 @@ export async function* runStaffConversationChat(
     });
     yield { type: "agent_message", message: agentMsg };
 
-    await updateAgent(agent.id, {
-      memoryAppend: {
-        id: `mem_${Date.now()}`,
-        content: `${PRINCIPAL_NAME}: ${userText.slice(0, 200)} → ${full.slice(0, 300)}`,
-        createdAt: new Date().toISOString(),
-        source: "conversation",
-      },
-    });
+    await appendAgentMemory(
+      agent.id,
+      `${PRINCIPAL_NAME}: ${userText.slice(0, 200)} → ${full.slice(0, 300)}`,
+      "conversation"
+    );
 
     history.push(agentMsg);
   }

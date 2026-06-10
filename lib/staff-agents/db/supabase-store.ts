@@ -85,8 +85,13 @@ export async function updateAgent(id: string, patch: StaffAgentUpdate): Promise<
   const current = await getAgent(id);
   if (!current) return null;
 
-  const { memoryAppend, ...rest } = patch;
-  const memory = memoryAppend ? [...current.memory, memoryAppend] : current.memory;
+  const { memoryAppend, memoryReplace, ...rest } = patch;
+  let memory = current.memory;
+  if (memoryReplace) {
+    memory = memoryReplace;
+  } else if (memoryAppend) {
+    memory = [...current.memory, memoryAppend].slice(-50);
+  }
 
   const updated: StaffAgent = {
     ...current,
