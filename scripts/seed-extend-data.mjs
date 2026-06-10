@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Extend Lemorax dummy data from last seeded month up to today.
- * Clones April 2026 patterns with slight variation for missing months.
+ * Extend Lemorax dummy data from the last month in Supabase through yesterday.
+ * Re-runnable: refreshes the current month each time (deletes + regenerates).
  *
- * Usage: node scripts/seed-extend-data.mjs
+ * Usage: npm run seed:extend
  *        node scripts/seed-extend-data.mjs --dry-run
  */
 import fs from "fs";
@@ -22,9 +22,9 @@ function loadEnvLocal() {
 loadEnvLocal();
 
 const DRY_RUN = process.argv.includes("--dry-run");
-const TODAY = new Date("2026-06-10");
-const SOURCE_PERIODE = "2026-04";
-const TARGET_MONTHS = ["2026-05", "2026-06"];
+const NOW = new Date();
+const YESTERDAY = new Date(NOW);
+YESTERDAY.setDate(YESTERDAY.getDate() - 1);
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -35,8 +35,70 @@ if (!url || !key) {
 
 const sb = createClient(url, key, { auth: { persistSession: false } });
 const BATCH = 100;
+const DATA_TABLES = ["kpi", "absensi", "sales_report", "finance", "crm", "marketing"];
 
-// Seeded pseudo-random for reproducible variation
+function formatYm(y, m) {
+  return `${y}-${String(m).padStart(2, "0")}`;
+}
+
+function parseYm(ym) {
+  const [y, m] = ym.split("-").map(Number);
+  return { y, m };
+}
+
+function getCurrentPeriode() {
+  return formatYm(NOW.getFullYear(), NOW.getMonth() + 1);
+}
+
+function addMonths(ym, delta) {
+  let { y, m } = parseYm(ym);
+  m += delta;
+  while (m > 12) {
+    m -= 12;
+    y++;
+  }
+  while (m < 1) {
+    m += 12;
+    y--;
+  }
+  return formatYm(y, m);
+}
+
+function monthsFromTo(start, end) {
+  const out = [];
+  let cur = start;
+  while (cur <= end) {
+    out.push(cur);
+    cur = addMonths(cur, 1);
+  }
+  return out;
+}
+
+function daysInMonth(ym) {
+  const { y, m } = parseYm(ym);
+  return new Date(y, m, 0).getDate();
+}
+
+function throughDayForMonth(periode) {
+  const { y, m } = parseYm(periode);
+  const current = getCurrentPeriode();
+  if (periode !== current) return null;
+  if (YESTERDAY.getFullYear() === y && YESTERDAY.getMonth() + 1 === m) {
+    return YESTERDAY.getDate();
+  }
+  return daysInMonth(periode);
+}
+
+async function getMaxPeriode(table = "sales_report") {
+  const { data, error } = await sb
+    .from(table)
+    .select("periode")
+    .order("periode", { ascending: false })
+    .limit(1);
+  if (error) throw new Error(`${table}: ${error.message}`);
+  return data?.[0]?.periode ?? null;
+}
+
 function seededRand(seed) {
   let s = seed;
   return () => {
@@ -54,13 +116,8 @@ function varyNum(value, rng, pct = 0.12) {
   return Math.round(value + delta);
 }
 
-function daysInMonth(ym) {
-  const [y, m] = ym.split("-").map(Number);
-  return new Date(y, m, 0).getDate();
-}
-
 function randomDateInMonth(ym, rng, maxDay = null) {
-  const [y, m] = ym.split("-").map(Number);
+  const { y, m } = parseYm(ym);
   const last = maxDay ?? daysInMonth(ym);
   const d = randInt(rng, 1, last);
   return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
@@ -83,11 +140,20 @@ async function fetchAll(table, select, filter = {}) {
   return rows;
 }
 
-async function upsertBatches(table, rows, onConflict = null) {
+async function deletePeriode(table, periode) {
+  const { error } = await sb.from(table).delete().eq("periode", periode);
+  if (error) throw new Error(`delete ${table} ${periode}: ${error.message}`);
+}
+
+async function insertBatches(table, rows, onConflict = null) {
+  if (!rows.length) {
+    console.log(`  ⏭️  ${table}: 0 rows`);
+    return 0;
+  }
   let ok = 0;
   for (let i = 0; i < rows.length; i += BATCH) {
     const batch = rows.slice(i, i + BATCH);
-    let q = sb.from(table).upsert(batch);
+    let q = sb.from(table).insert(batch);
     if (onConflict) q = sb.from(table).upsert(batch, { onConflict });
     const { error } = await q;
     if (error) throw new Error(`${table} batch ${i / BATCH + 1}: ${error.message}`);
@@ -99,14 +165,10 @@ async function upsertBatches(table, rows, onConflict = null) {
 }
 
 async function getMaxId(table, col, prefix) {
-  const { data, error } = await sb
-    .from(table)
-    .select(col)
-    .order(col, { ascending: false })
-    .limit(1);
+  const { data, error } = await sb.from(table).select(col).order(col, { ascending: false }).limit(1);
   if (error) throw error;
   const val = data?.[0]?.[col] ?? `${prefix}00000`;
-  return parseInt(val.replace(prefix, ""), 10);
+  return parseInt(String(val).replace(prefix, ""), 10);
 }
 
 function kpiStatus(pct) {
@@ -116,10 +178,11 @@ function kpiStatus(pct) {
   return "Below Target";
 }
 
-function buildKpi(sourceKpi, periode, rng) {
+function buildKpi(sourceKpi, periode, monthFraction) {
   return sourceKpi.map((row, i) => {
     const target = row.target;
-    const actual = varyNum(row.actual, seededRand(i + periode.charCodeAt(5)), 0.1);
+    const baseActual = Math.max(1, Math.round(row.actual * monthFraction));
+    const actual = varyNum(baseActual, seededRand(i + periode.charCodeAt(5)), 0.1);
     const achievement_pct = Math.round((actual / target) * 1000) / 10;
     return {
       periode,
@@ -137,7 +200,7 @@ function buildKpi(sourceKpi, periode, rng) {
   });
 }
 
-function buildAbsensi(sourceAbsensi, periode, rng, weeks) {
+function buildAbsensi(sourceAbsensi, periode, weeks) {
   const byEmployee = {};
   for (const row of sourceAbsensi) {
     if (!byEmployee[row.employee_id]) byEmployee[row.employee_id] = [];
@@ -171,7 +234,7 @@ function buildAbsensi(sourceAbsensi, periode, rng, weeks) {
   return out;
 }
 
-function buildSales(sourceSales, periode, rng, count, startTrxNum, maxDay = null) {
+function buildSales(sourceSales, periode, count, startTrxNum, maxDay = null) {
   const products = [...new Set(sourceSales.map((s) => s.produk))];
   const channels = [...new Set(sourceSales.map((s) => s.channel))];
   const statuses = ["Closed", "Closed", "Closed", "Closed", "Pending", "Cancelled"];
@@ -202,17 +265,18 @@ function buildSales(sourceSales, periode, rng, count, startTrxNum, maxDay = null
   return out;
 }
 
-function buildFinance(sourceFinance, periode, rng, count, startFinNum) {
+function buildFinance(sourceFinance, periode, sourcePeriode, count, startFinNum) {
   const out = [];
   for (let i = 0; i < count; i++) {
     const src = sourceFinance[i % sourceFinance.length];
     const r = seededRand(startFinNum + i);
+    const keterangan = String(src.keterangan || "").replace(sourcePeriode, periode);
     out.push({
       periode,
       cabang: src.cabang,
       tipe: src.tipe,
       kategori: src.kategori,
-      keterangan: src.keterangan.replace(SOURCE_PERIODE, periode),
+      keterangan: keterangan.includes(periode) ? keterangan : `${src.kategori} - ${src.cabang} ${periode}`,
       jumlah: varyNum(src.jumlah, r, 0.15),
       metode_pembayaran: src.metode_pembayaran,
       referensi: `FIN${String(startFinNum + i).padStart(6, "0")}`,
@@ -221,7 +285,7 @@ function buildFinance(sourceFinance, periode, rng, count, startFinNum) {
   return out;
 }
 
-function buildCrm(sourceCrm, periode, rng, count, startDealNum, maxDay = null) {
+function buildCrm(sourceCrm, periode, count, startDealNum, maxDay = null) {
   const statuses = ["Closed Won", "Closed Won", "Proposal", "Negotiation", "Prospecting", "Closed Lost"];
   const out = [];
   for (let i = 0; i < count; i++) {
@@ -255,12 +319,12 @@ function buildCrm(sourceCrm, periode, rng, count, startDealNum, maxDay = null) {
   return out;
 }
 
-function buildMarketing(sourceMarketing, periode, rng) {
+function buildMarketing(sourceMarketing, periode, monthFraction) {
   return sourceMarketing.map((src, i) => {
     const r = seededRand(i + periode.charCodeAt(5) * 7);
-    const spend = varyNum(src.spend, r, 0.1);
-    const conversions = varyNum(src.conversions, r, 0.15);
-    const revenue = varyNum(src.revenue_generated, r, 0.12);
+    const spend = varyNum(Math.round(src.spend * monthFraction), r, 0.1);
+    const conversions = varyNum(Math.max(1, Math.round(src.conversions * monthFraction)), r, 0.15);
+    const revenue = varyNum(Math.round(src.revenue_generated * monthFraction), r, 0.12);
     return {
       periode,
       campaign_name: src.campaign_name,
@@ -268,43 +332,65 @@ function buildMarketing(sourceMarketing, periode, rng) {
       target_audience: src.target_audience,
       budget: varyNum(src.budget, r, 0.08),
       spend,
-      impressions: varyNum(src.impressions, r, 0.1),
-      clicks: varyNum(src.clicks, r, 0.12),
+      impressions: varyNum(Math.round(src.impressions * monthFraction), r, 0.1),
+      clicks: varyNum(Math.round(src.clicks * monthFraction), r, 0.12),
       ctr_pct: src.ctr_pct,
       conversions,
       conv_rate_pct: src.conv_rate_pct,
       revenue_generated: revenue,
-      roas: Math.round((revenue / spend) * 100) / 100,
+      roas: Math.round((revenue / Math.max(spend, 1)) * 100) / 100,
       cpl: Math.round(spend / Math.max(conversions, 1)),
       status: src.status,
     };
   });
 }
 
+async function resolvePlan() {
+  const currentMonth = getCurrentPeriode();
+  const maxPeriode = await getMaxPeriode("sales_report");
+
+  if (!maxPeriode) {
+    throw new Error("No sales_report data in Supabase. Run scripts/seed_supabase.py first.");
+  }
+
+  let targetMonths;
+  if (maxPeriode >= currentMonth) {
+    targetMonths = [currentMonth];
+  } else {
+    targetMonths = monthsFromTo(addMonths(maxPeriode, 1), currentMonth);
+  }
+
+  const sourcePeriode = addMonths(targetMonths[0], -1);
+  const throughDate = YESTERDAY.toISOString().slice(0, 10);
+
+  return { currentMonth, maxPeriode, targetMonths, sourcePeriode, throughDate };
+}
+
 async function main() {
+  const { currentMonth, maxPeriode, targetMonths, sourcePeriode, throughDate } = await resolvePlan();
+
   console.log("📊 Lemorax Data Extender");
-  console.log(`   Source: ${SOURCE_PERIODE} | Target: ${TARGET_MONTHS.join(", ")} (until ${TODAY.toISOString().slice(0, 10)})`);
+  console.log(`   DB max periode: ${maxPeriode}`);
+  console.log(`   Target months: ${targetMonths.join(", ")}`);
+  console.log(`   Source template: ${sourcePeriode}`);
+  console.log(`   Through: ${throughDate} (yesterday)`);
   if (DRY_RUN) console.log("   Mode: DRY RUN (no writes)\n");
   else console.log("");
-
-  // Check existing data for target months
-  for (const p of TARGET_MONTHS) {
-    const { count } = await sb.from("kpi").select("*", { count: "exact", head: true }).eq("periode", p);
-    if (count > 0) {
-      console.log(`⚠️  ${p} already has ${count} KPI rows — will upsert/append`);
-    }
-  }
 
   console.log("📥 Fetching source data...");
   const [sourceKpi, sourceAbsensi, sourceSales, sourceFinance, sourceCrm, sourceMarketing] =
     await Promise.all([
-      fetchAll("kpi", "*", { periode: SOURCE_PERIODE }),
-      fetchAll("absensi", "*", { periode: SOURCE_PERIODE }),
-      fetchAll("sales_report", "*", { periode: SOURCE_PERIODE }),
-      fetchAll("finance", "*", { periode: SOURCE_PERIODE }),
-      fetchAll("crm", "*", { periode: SOURCE_PERIODE }),
-      fetchAll("marketing", "*", { periode: SOURCE_PERIODE }),
+      fetchAll("kpi", "*", { periode: sourcePeriode }),
+      fetchAll("absensi", "*", { periode: sourcePeriode }),
+      fetchAll("sales_report", "*", { periode: sourcePeriode }),
+      fetchAll("finance", "*", { periode: sourcePeriode }),
+      fetchAll("crm", "*", { periode: sourcePeriode }),
+      fetchAll("marketing", "*", { periode: sourcePeriode }),
     ]);
+
+  if (!sourceSales.length) {
+    throw new Error(`No source rows for ${sourcePeriode}. Seed earlier months first.`);
+  }
 
   console.log(`   KPI: ${sourceKpi.length} | Absensi: ${sourceAbsensi.length} | Sales: ${sourceSales.length}`);
   console.log(`   Finance: ${sourceFinance.length} | CRM: ${sourceCrm.length} | Marketing: ${sourceMarketing.length}\n`);
@@ -320,32 +406,33 @@ async function main() {
   const allCrm = [];
   const allMarketing = [];
 
-  const rng = seededRand(42);
+  for (const periode of targetMonths) {
+    const maxDay = throughDayForMonth(periode);
+    const isPartial = maxDay !== null;
+    const monthFraction = isPartial ? maxDay / daysInMonth(periode) : 1;
+    const weeks = isPartial ? Math.max(1, Math.ceil(maxDay / 7)) : 5;
 
-  for (const periode of TARGET_MONTHS) {
-    const isPartial = periode === "2026-06";
-    const maxDay = isPartial ? TODAY.getDate() : null;
-    const monthFraction = isPartial ? TODAY.getDate() / daysInMonth(periode) : 1;
+    console.log(
+      `🔧 Generating ${periode}${isPartial ? ` (partial, day 1–${maxDay})` : ""}...`
+    );
 
-    console.log(`🔧 Generating ${periode}${isPartial ? ` (partial, day 1–${maxDay})` : ""}...`);
+    allKpi.push(...buildKpi(sourceKpi, periode, monthFraction));
+    allAbsensi.push(...buildAbsensi(sourceAbsensi, periode, weeks));
 
-    allKpi.push(...buildKpi(sourceKpi, periode, rng));
-    allAbsensi.push(...buildAbsensi(sourceAbsensi, periode, rng, isPartial ? 2 : 5));
-
-    const salesCount = Math.round(sourceSales.length * monthFraction);
-    const financeCount = Math.round(sourceFinance.length * monthFraction);
+    const salesCount = Math.max(1, Math.round(sourceSales.length * monthFraction));
+    const financeCount = Math.max(1, Math.round(sourceFinance.length * monthFraction));
     const crmCount = Math.max(1, Math.round(sourceCrm.length * monthFraction));
 
-    allSales.push(...buildSales(sourceSales, periode, rng, salesCount, trxNum, maxDay));
+    allSales.push(...buildSales(sourceSales, periode, salesCount, trxNum, maxDay));
     trxNum += salesCount;
 
-    allFinance.push(...buildFinance(sourceFinance, periode, rng, financeCount, finNum));
+    allFinance.push(...buildFinance(sourceFinance, periode, sourcePeriode, financeCount, finNum));
     finNum += financeCount;
 
-    allCrm.push(...buildCrm(sourceCrm, periode, rng, crmCount, dealNum, maxDay));
+    allCrm.push(...buildCrm(sourceCrm, periode, crmCount, dealNum, maxDay));
     dealNum += crmCount;
 
-    allMarketing.push(...buildMarketing(sourceMarketing, periode, rng));
+    allMarketing.push(...buildMarketing(sourceMarketing, periode, monthFraction));
   }
 
   console.log("\n📦 Generated totals:");
@@ -357,17 +444,24 @@ async function main() {
     return;
   }
 
-  console.log("\n📤 Upserting to Supabase...");
-  await upsertBatches("kpi", allKpi);
-  await upsertBatches("absensi", allAbsensi);
-  await upsertBatches("sales_report", allSales, "transaction_id");
-  await upsertBatches("finance", allFinance);
-  await upsertBatches("crm", allCrm, "deal_id");
-  await upsertBatches("marketing", allMarketing);
+  console.log("\n🗑️  Clearing target months before insert...");
+  for (const periode of targetMonths) {
+    for (const table of DATA_TABLES) {
+      await deletePeriode(table, periode);
+    }
+    console.log(`   cleared ${periode}`);
+  }
 
-  // Verify
+  console.log("\n📤 Inserting to Supabase...");
+  await insertBatches("kpi", allKpi);
+  await insertBatches("absensi", allAbsensi);
+  await insertBatches("sales_report", allSales, "transaction_id");
+  await insertBatches("finance", allFinance);
+  await insertBatches("crm", allCrm, "deal_id");
+  await insertBatches("marketing", allMarketing);
+
   console.log("\n🔍 Verification:");
-  for (const p of [...TARGET_MONTHS].reverse()) {
+  for (const p of [...targetMonths].reverse()) {
     const { count: k } = await sb.from("kpi").select("*", { count: "exact", head: true }).eq("periode", p);
     const { data: s } = await sb
       .from("sales_report")
@@ -378,7 +472,7 @@ async function main() {
     console.log(`   ${p}: KPI=${k}, latest sales=${s?.[0]?.tanggal ?? "N/A"}`);
   }
 
-  console.log("\n🎉 Data extension selesai!");
+  console.log(`\n🎉 Data extended through ${throughDate}. Re-run daily to stay current.`);
 }
 
 main().catch((e) => {

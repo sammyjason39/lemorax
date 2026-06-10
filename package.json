@@ -9,7 +9,9 @@
     "lint": "next lint",
     "setup:staff-supabase": "node scripts/setup-staff-supabase.mjs",
     "import:staff-supabase": "node scripts/import-staff-to-supabase.mjs",
-    "seed:extend": "node scripts/seed-extend-data.mjs"
+    "seed:extend": "node scripts/seed-extend-data.mjs",
+    "seed:extend:dry": "node scripts/seed-extend-data.mjs --dry-run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@a2a-js/sdk": "^0.3.13",
@@ -49,6 +51,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@types/express": "^5.0.6",
     "@types/node": "^20",
     "@types/react": "^18",
