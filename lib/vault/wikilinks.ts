@@ -7,7 +7,7 @@ export function extractWikilinks(content: string): string[] {
     const target = match[1].trim();
     if (target) links.add(target);
   }
-  return [...links];
+  return Array.from(links);
 }
 
 export function slugifyNoteTitle(title: string): string {

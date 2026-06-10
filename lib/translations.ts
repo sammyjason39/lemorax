@@ -21,6 +21,7 @@ export const translations = {
     "menu.ai": "AI Analyst",
     "menu.ai_staff": "AI Agents Staff",
     "menu.workspace": "Workspace",
+    "menu.vault": "Company Vault",
 
     "workspace.title": "Workspace",
     "workspace.subtitle": "Koneksi platform & agenda Pak Anjas",
@@ -82,6 +83,7 @@ export const translations = {
     "menu.ai": "AI Analyst",
     "menu.ai_staff": "AI Agents Staff",
     "menu.workspace": "Workspace",
+    "menu.vault": "Company Vault",
 
     "workspace.title": "Workspace",
     "workspace.subtitle": "Platform connections & Pak Anjas agenda",

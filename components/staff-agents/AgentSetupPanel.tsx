@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Save, Clock, Brain, Wrench, FileText } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Save, Clock, Brain, FileText } from "lucide-react";
 import type { StaffAgent } from "@/lib/staff-agents/types";
 import { AgentAvatar } from "@/components/staff-agents/AgentAvatar";
+import { AgentSkillsSection } from "@/components/staff-agents/AgentSkillsSection";
 import { brand } from "@/lib/brand";
 
 type Props = {
@@ -19,6 +20,14 @@ export function AgentSetupPanel({ agent, onSave, saving }: Props) {
   const [scheduleAction, setScheduleAction] = useState(agent.schedule.action);
   const [scheduleEnabled, setScheduleEnabled] = useState(agent.schedule.enabled);
   const [runningSchedule, setRunningSchedule] = useState(false);
+
+  useEffect(() => {
+    setDisplayName(agent.displayName ?? agent.name);
+    setSoulMd(agent.soulMd);
+    setScheduleLabel(agent.schedule.label);
+    setScheduleAction(agent.schedule.action);
+    setScheduleEnabled(agent.schedule.enabled);
+  }, [agent]);
 
   const handleSave = async () => {
     await onSave({
@@ -99,40 +108,7 @@ export function AgentSetupPanel({ agent, onSave, saving }: Props) {
           />
         </section>
 
-        {/* Skills */}
-        <section>
-          <div className="flex items-center gap-2 mb-2">
-            <Wrench size={14} style={{ color: brand.blue }} />
-            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-              Skills
-            </span>
-          </div>
-          <div className="space-y-2">
-            {agent.skills.map((s) => (
-              <div
-                key={s.id}
-                className="rounded-xl px-3 py-2 text-xs"
-                style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border)" }}
-              >
-                <div className="font-medium" style={{ color: "var(--text-primary)" }}>
-                  {s.name}
-                </div>
-                <div style={{ color: "var(--text-muted)" }}>{s.description}</div>
-                <div className="flex gap-1 mt-1 flex-wrap">
-                  {s.tags.map((t) => (
-                    <span
-                      key={t}
-                      className="px-1.5 py-0.5 rounded text-[10px]"
-                      style={{ background: brand.blueSoft, color: brand.blue }}
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        <AgentSkillsSection agent={agent} />
 
         {/* Schedule */}
         <section>
@@ -199,6 +175,7 @@ export function AgentSetupPanel({ agent, onSave, saving }: Props) {
                     className="text-[11px] rounded-lg px-2 py-1.5"
                     style={{ background: "var(--bg-tertiary)", color: "var(--text-secondary)" }}
                   >
+                    <span className="opacity-50 text-[9px]">{m.source} · </span>
                     {m.content}
                   </div>
                 ))

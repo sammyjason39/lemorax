@@ -2,7 +2,11 @@ import type { StaffAgent, StaffMessage } from "@/lib/staff-agents/types";
 import { ARIES_SYSTEM_PROMPT } from "@/lib/openrouter";
 import { buildTeamRoster, getDisplayName, PRINCIPAL_NAME } from "@/lib/staff-agents/names";
 
-export function buildStaffAgentSystemPrompt(agent: StaffAgent, team?: StaffAgent[]): string {
+export function buildStaffAgentSystemPrompt(
+  agent: StaffAgent,
+  team?: StaffAgent[],
+  extras?: { installedSkills?: string; vaultContext?: string }
+): string {
   const skillsBlock = agent.skills
     .map((s) => `- **${s.name}**: ${s.description} (${s.tags.join(", ")})`)
     .join("\n");
@@ -24,6 +28,14 @@ export function buildStaffAgentSystemPrompt(agent: StaffAgent, team?: StaffAgent
       ? `\n## Tim Staff (gunakan @Tag saat mention di grup)\n${buildTeamRoster(team)}`
       : "";
 
+  const skillsInstallBlock = extras?.installedSkills?.trim()
+    ? `\n## Installed Skills (from registry)\n${extras.installedSkills}`
+    : "";
+
+  const vaultBlock = extras?.vaultContext?.trim()
+    ? `\n${extras.vaultContext}\n\nGunakan [[wikilink]] saat merujuk dokumen vault.`
+    : "";
+
   return `${ARIES_SYSTEM_PROMPT}
 
 ---
@@ -39,6 +51,8 @@ ${memoryBlock}
 
 ## Schedule
 ${scheduleBlock}
+${skillsInstallBlock}
+${vaultBlock}
 ${teamBlock}
 
 ---

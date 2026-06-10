@@ -7,6 +7,8 @@ import { streamComposioStaffReply } from "@/lib/staff-agents/composio-runner";
 import { PRINCIPAL_NAME } from "@/lib/brand";
 import type { StaffStreamChunk } from "@/lib/staff-agents/stream";
 import { isTextChunk } from "@/lib/staff-agents/stream";
+import { getAgentSkillPromptBlock } from "@/lib/staff-agents/skills/registry";
+import { getVaultContextForQuery } from "@/lib/vault/store";
 
 function getQwenApiUrl(): string {
   const base = process.env.QWEN_API_BASE_URL?.replace(/\/$/, "");
@@ -24,6 +26,19 @@ const MODEL = process.env.QWEN_MODEL || "qwen3.7-plus";
 
 const DATA_KEYWORDS =
   /\b(cabang|sales|revenue|omset|kpi|profit|crm|deal|marketing|finance|absensi|karyawan|transaksi|berapa|total|data|laporan)\b/i;
+
+const VAULT_KEYWORDS =
+  /\b(mom|minutes|meeting|rapat|dokumen|document|vault|notulen|sop|policy|kebijakan|obsidian)\b|\[\[/i;
+
+async function buildPromptExtras(agent: StaffAgent, userMessage: string) {
+  const [installedSkills, vaultContext] = await Promise.all([
+    getAgentSkillPromptBlock(agent.id).catch(() => ""),
+    VAULT_KEYWORDS.test(userMessage)
+      ? getVaultContextForQuery(userMessage).catch(() => "")
+      : Promise.resolve(""),
+  ]);
+  return { installedSkills, vaultContext };
+}
 
 function agentHasSqlSkill(agent: StaffAgent): boolean {
   return agent.skills.some((s) => s.id === "sql" || s.tags.includes("data"));
@@ -57,7 +72,8 @@ export async function* streamStaffAgentReply(
   }
 
   const apiKey = getQwenApiKey();
-  const systemPrompt = buildStaffAgentSystemPrompt(agent, team);
+  const extras = await buildPromptExtras(agent, userMessage);
+  const systemPrompt = buildStaffAgentSystemPrompt(agent, team, extras);
   const historyText = formatConversationHistory(history, agent.id, team);
 
   let dataContext = "";

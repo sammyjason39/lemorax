@@ -32,7 +32,7 @@ export function parseSkillFrontmatter(md: string): {
   const match = md.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
   if (!match) {
     const firstLine = md.split("\n")[0]?.replace(/^#\s*/, "").trim() || "Imported Skill";
-    return { name: firstLine, description: "", tags: [], body: md };
+    return { name: firstLine, description: "", tags: [] as string[], body: md };
   }
 
   const front = match[1];
@@ -57,7 +57,7 @@ export function parseSkillFrontmatter(md: string): {
     }
   }
 
-  return { name, description, body };
+  return { name, description, tags, body };
 }
 
 export function slugifySkill(name: string): string {

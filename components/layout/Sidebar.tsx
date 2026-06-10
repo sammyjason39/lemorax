@@ -16,6 +16,7 @@ import {
   RotateCcw,
   UsersRound,
   LayoutGrid,
+  BookOpen,
 } from "lucide-react";
 import { useFilters } from "@/contexts/FilterContext";
 import { useState } from "react";
@@ -56,6 +57,12 @@ const NAV_ITEMS: { href: string; labelKey: TranslationKey; icon: any; badge?: st
     labelKey: "menu.workspace",
     icon: LayoutGrid,
     badge: "GCal",
+  },
+  {
+    href: "/dashboard/vault",
+    labelKey: "menu.vault",
+    icon: BookOpen,
+    badge: "Vault",
   },
 ];
 

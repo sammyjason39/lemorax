@@ -301,7 +301,7 @@ export function StaffAgentsApp() {
 
       {showSetup && selectedAgent && (
         <AgentSetupPanel
-          key={selectedAgent.id}
+          key={`${selectedAgent.id}-${selectedAgent.memory.length}-${selectedAgent.updatedAt}`}
           agent={selectedAgent}
           onSave={handleSaveAgent}
           saving={savingAgent}

@@ -1,4 +1,5 @@
 import { listAgents, getAgent, listMessages, appendMessage, updateAgent } from "@/lib/staff-agents/store";
+import { appendAgentMemory } from "@/lib/staff-agents/memory";
 import { collectStaffAgentReply } from "@/lib/staff-agents/llm";
 import type { StaffAgent, StaffAgentSchedule, StaffMessage } from "@/lib/staff-agents/types";
 import { PRINCIPAL_NAME } from "@/lib/brand";
@@ -121,13 +122,12 @@ export async function runAgentSchedule(
 
   await updateAgent(agent.id, {
     schedule: { ...agent.schedule, lastRunAt: new Date().toISOString() },
-    memoryAppend: {
-      id: `mem_sched_${Date.now()}`,
-      content: `[Schedule] ${agent.schedule.action} → ${body.slice(0, 280)}`,
-      createdAt: new Date().toISOString(),
-      source: "schedule",
-    },
   });
+  await appendAgentMemory(
+    agent.id,
+    `[Schedule] ${agent.schedule.action} → ${body.slice(0, 280)}`,
+    "schedule"
+  );
 
   return { ...base, ok: true, message };
 }
