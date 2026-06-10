@@ -10,6 +10,7 @@ import { RevenueLineChart } from "@/components/charts/RevenueLineChart";
 import { BranchBarChart } from "@/components/charts/BranchBarChart";
 import { AriesPieChart } from "@/components/charts/PieChart";
 import { formatRupiahShort, formatPct, getInitials, calcDelta } from "@/lib/formatters";
+import { formatPeriodeFilter } from "@/lib/periode";
 import { brand, getCategoricalColor } from "@/lib/brand";
 import { TrendingUp, DollarSign, Activity, Users, Target, Handshake, AlertTriangle } from "lucide-react";
 
@@ -17,7 +18,7 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export default function OverviewPage() {
   const { periodeStart, periodeEnd, cabang } = useFilters();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const params = new URLSearchParams({
     periode_start: periodeStart,
     periode_end: periodeEnd,
@@ -101,7 +102,7 @@ export default function OverviewPage() {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 items-stretch">
           <div className="xl:col-span-2 card-base p-5 flex flex-col">
             <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
-              {t("chart.rev_vs_exp")} ({periodeStart} — {periodeEnd})
+              {t("chart.rev_vs_exp")} ({periodeStart} — {formatPeriodeFilter(periodeEnd, language)})
             </h3>
             <div className="flex-1">
               <RevenueLineChart data={data?.revenueVsExpense || []} loading={isLoading} />

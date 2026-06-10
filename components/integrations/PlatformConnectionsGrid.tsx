@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import useSWR from "swr";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import useSWR, { mutate as globalMutate } from "swr";
 import { brand } from "@/lib/brand";
 import { ExternalLink, Link2, Loader2, Plug, RefreshCw } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -13,7 +14,7 @@ type ComposioStatus = {
   configured: boolean;
   sessionId: string | null;
   groups: WorkspaceIntegrationGroup[];
-  connectedAccounts: { id: string; toolkit: string; status: string }[];
+  connectedAccounts: { id: string; toolkit: string; status: string; label?: string | null }[];
 };
 
 type Props = {
@@ -31,9 +32,27 @@ export function PlatformConnectionsGrid({
   maxPerGroup,
 }: Props) {
   const { language: lang } = useLanguage();
+  const searchParams = useSearchParams();
   const [connecting, setConnecting] = useState<string | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
   const { data, mutate, isLoading } = useSWR<ComposioStatus>("/api/composio/status", fetcher);
+
+  useEffect(() => {
+    if (searchParams.get("composio") !== "connected") return;
+    void mutate();
+    const retry1 = window.setTimeout(() => void mutate(), 1500);
+    const retry2 = window.setTimeout(() => void mutate(), 4000);
+    return () => {
+      window.clearTimeout(retry1);
+      window.clearTimeout(retry2);
+    };
+  }, [searchParams, mutate]);
+
+  useEffect(() => {
+    const onFocus = () => void mutate();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [mutate]);
 
   const handleConnect = useCallback(
     async (toolkit: string) => {
@@ -43,11 +62,23 @@ export function PlatformConnectionsGrid({
         const res = await fetch("/api/composio/connect", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ toolkit, returnPath }),
+          body: JSON.stringify({
+            toolkit,
+            returnPath,
+            origin: typeof window !== "undefined" ? window.location.origin : undefined,
+          }),
         });
         const body = await res.json();
         if (!res.ok) throw new Error(body.error || "Connect failed");
-        window.open(body.redirectUrl, "_blank", "noopener,noreferrer");
+        const popup = window.open(body.redirectUrl, "_blank", "noopener,noreferrer");
+        const poll = window.setInterval(() => {
+          if (popup?.closed) {
+            window.clearInterval(poll);
+            void mutate();
+            void globalMutate("/api/composio/status");
+          }
+        }, 800);
+        window.setTimeout(() => window.clearInterval(poll), 120_000);
       } catch (err) {
         setConnectError(err instanceof Error ? err.message : "Gagal menghubungkan");
       } finally {
@@ -58,14 +89,15 @@ export function PlatformConnectionsGrid({
     [mutate, returnPath]
   );
 
-  const connectedSlugs = new Set(
+  const connectedByToolkit = new Map(
     (data?.connectedAccounts ?? [])
       .filter((a) => {
         const s = a.status?.toUpperCase?.() ?? a.status;
         return s === "ACTIVE" || s === "CONNECTED";
       })
-      .map((a) => a.toolkit.toLowerCase())
+      .map((a) => [a.toolkit.toLowerCase(), a] as const)
   );
+  const connectedSlugs = new Set(connectedByToolkit.keys());
 
   const connectedCount = connectedSlugs.size;
   const totalCount =
@@ -143,6 +175,7 @@ export function PlatformConnectionsGrid({
                 <div className={`grid ${gridCols} gap-2`}>
                   {items.map((tk) => {
                     const isConnected = connectedSlugs.has(tk.slug);
+                    const accountLabel = connectedByToolkit.get(tk.slug)?.label;
                     return (
                       <button
                         key={tk.slug}
@@ -161,12 +194,28 @@ export function PlatformConnectionsGrid({
                         <span className={compact ? "text-base" : "text-lg"}>{tk.emoji}</span>
                         <div className="flex-1 min-w-0">
                           <div className="font-medium truncate">{tk.name}</div>
-                          {!compact && tk.description && (
+                          {!compact && isConnected && accountLabel && (
+                            <div
+                              className="text-[10px] truncate mt-0.5 font-medium"
+                              style={{ color: brand.blue }}
+                            >
+                              {accountLabel}
+                            </div>
+                          )}
+                          {!compact && tk.description && !(isConnected && accountLabel) && (
                             <div
                               className="text-[10px] truncate mt-0.5 opacity-70"
                               style={{ color: "var(--text-muted)" }}
                             >
                               {tk.description}
+                            </div>
+                          )}
+                          {!compact && isConnected && !accountLabel && (
+                            <div
+                              className="text-[10px] truncate mt-0.5 opacity-70"
+                              style={{ color: "var(--text-muted)" }}
+                            >
+                              {lang === "id" ? "Terhubung" : "Connected"}
                             </div>
                           )}
                         </div>

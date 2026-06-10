@@ -10,6 +10,7 @@ import {
 import { buildStaffAgentSystemPrompt, formatConversationHistory } from "@/lib/staff-agents/prompt";
 import { getDisplayName } from "@/lib/staff-agents/names";
 import { PRINCIPAL_NAME } from "@/lib/brand";
+import type { StaffStreamChunk } from "@/lib/staff-agents/stream";
 
 const MODEL = process.env.QWEN_MODEL || "qwen3.7-plus";
 const MAX_TOOL_ROUNDS = 8;
@@ -73,7 +74,7 @@ export async function* streamComposioStaffReply(
   userMessage: string,
   history: StaffMessage[],
   team?: StaffAgent[]
-): AsyncGenerator<string> {
+): AsyncGenerator<StaffStreamChunk> {
   if (!isComposioConfigured()) {
     throw new Error("Composio belum dikonfigurasi (COMPOSIO_API_KEY)");
   }
@@ -112,10 +113,12 @@ export async function* streamComposioStaffReply(
     const toolCalls = choice.tool_calls ?? [];
     if (toolCalls.length === 0) {
       if (choice.content) {
-        yield choice.content;
+        yield { kind: "text", content: choice.content };
       }
       return;
     }
+
+    yield { kind: "processing" };
 
     messages.push({
       role: "assistant",
@@ -124,7 +127,6 @@ export async function* streamComposioStaffReply(
     });
 
     for (const tc of toolCalls) {
-      yield `\n🔧 *${tc.function.name}*…\n`;
       const toolMsg = await executeComposioToolCall(tc);
       messages.push(toolMsg);
     }
@@ -146,7 +148,7 @@ export async function* streamComposioStaffReply(
       try {
         const parsed = JSON.parse(payload);
         const content = parsed.choices?.[0]?.delta?.content;
-        if (content) yield content;
+        if (content) yield { kind: "text", content };
       } catch {
         // skip
       }
@@ -162,7 +164,7 @@ export async function collectComposioStaffReply(
 ): Promise<string> {
   let full = "";
   for await (const chunk of streamComposioStaffReply(agent, userMessage, history, team)) {
-    full += chunk;
+    if (chunk.kind === "text") full += chunk.content;
   }
   return full;
 }

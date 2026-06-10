@@ -5,6 +5,8 @@ import { queryBusinessData } from "@/lib/agents/query-business-data";
 import { shouldRouteToComposio } from "@/lib/composio/config";
 import { streamComposioStaffReply } from "@/lib/staff-agents/composio-runner";
 import { PRINCIPAL_NAME } from "@/lib/brand";
+import type { StaffStreamChunk } from "@/lib/staff-agents/stream";
+import { isTextChunk } from "@/lib/staff-agents/stream";
 
 function getQwenApiUrl(): string {
   const base = process.env.QWEN_API_BASE_URL?.replace(/\/$/, "");
@@ -43,14 +45,14 @@ export async function* streamStaffAgentReply(
   userMessage: string,
   history: StaffMessage[],
   team?: StaffAgent[]
-): AsyncGenerator<string> {
+): AsyncGenerator<StaffStreamChunk> {
   if (shouldRouteToComposio(userMessage)) {
     try {
       yield* streamComposioStaffReply(agent, userMessage, history, team);
       return;
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Composio error";
-      yield `⚠️ Composio: ${msg}\n\n(Mencoba jawab via Qwen…)\n\n`;
+      yield { kind: "text", content: `⚠️ Composio: ${msg}\n\n(Mencoba jawab via Qwen…)\n\n` };
     }
   }
 
@@ -108,7 +110,7 @@ export async function* streamStaffAgentReply(
       try {
         const parsed = JSON.parse(data);
         const content = parsed.choices?.[0]?.delta?.content;
-        if (content) yield content;
+        if (content) yield { kind: "text", content };
       } catch {
         // skip
       }
@@ -124,7 +126,7 @@ export async function collectStaffAgentReply(
 ): Promise<string> {
   let full = "";
   for await (const chunk of streamStaffAgentReply(agent, userMessage, history, team)) {
-    full += chunk;
+    if (isTextChunk(chunk)) full += chunk.content;
   }
   return full;
 }

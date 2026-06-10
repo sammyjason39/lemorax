@@ -17,9 +17,9 @@ export async function GET() {
       groups: WORKSPACE_INTEGRATION_GROUPS,
       connectedAccounts: accounts.map((a) => ({
         id: a.id,
-        toolkit: a.toolkit?.slug ?? "unknown",
+        toolkit: a.toolkit,
         status: a.status,
-        createdAt: a.createdAt,
+        label: a.label,
       })),
     });
   } catch (err) {

@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(baseUrl);
     }
 
-    const tokens = await exchangeGoogleCode(code);
+    const tokens = await exchangeGoogleCode(code, req, req.nextUrl.origin);
     await saveGoogleCalendarConnection({
       googleEmail: tokens.googleEmail,
       accessToken: tokens.accessToken,

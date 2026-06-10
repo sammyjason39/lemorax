@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
-import { createServerSupabaseClient } from "@/lib/supabase";
+import { createServerSupabaseClient, fetchAllRows } from "@/lib/supabase";
 import { createSeedStore } from "@/lib/staff-agents/seed";
 import { migrateStaffStore, sortConversations } from "@/lib/staff-agents/migrate";
 import {
@@ -10,6 +10,7 @@ import {
   conversationToRow,
   messageFromRow,
   messageToRow,
+  type MessageRow,
 } from "@/lib/staff-agents/db/map";
 import type {
   StaffAgent,
@@ -131,12 +132,59 @@ export async function createAgent(
   return agent;
 }
 
+async function reconcileConversationPreviews(
+  conversations: StaffConversation[]
+): Promise<StaffConversation[]> {
+  const sb = createServerSupabaseClient();
+
+  const enriched = await Promise.all(
+    conversations.map(async (conv) => {
+      const { data: latest, error } = await sb
+        .from("staff_messages")
+        .select("content, created_at")
+        .eq("conversation_id", conv.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error || !latest) return conv;
+
+      const preview = String(latest.content).slice(0, 120);
+      const at = String(latest.created_at);
+      const matchesLatest =
+        conv.lastMessage === preview && conv.lastMessageAt === at;
+
+      if (matchesLatest) return conv;
+
+      const { error: updateErr } = await sb
+        .from("staff_conversations")
+        .update({
+          last_message: preview,
+          last_message_at: at,
+          updated_at: at,
+        })
+        .eq("id", conv.id);
+      if (updateErr) throw new Error(updateErr.message);
+
+      return {
+        ...conv,
+        lastMessage: preview,
+        lastMessageAt: at,
+        updatedAt: at,
+      };
+    })
+  );
+
+  return sortConversations(enriched);
+}
+
 export async function listConversations(): Promise<StaffConversation[]> {
   await ensureBootstrapped();
   const sb = createServerSupabaseClient();
   const { data, error } = await sb.from("staff_conversations").select("*");
   if (error) throw new Error(error.message);
-  return sortConversations((data ?? []).map((r) => conversationFromRow(r as never)));
+  const conversations = (data ?? []).map((r) => conversationFromRow(r as never));
+  return reconcileConversationPreviews(conversations);
 }
 
 export async function getConversation(id: string): Promise<StaffConversation | undefined> {
@@ -169,13 +217,15 @@ export async function createConversation(input: {
 export async function listMessages(conversationId: string): Promise<StaffMessage[]> {
   await ensureBootstrapped();
   const sb = createServerSupabaseClient();
-  const { data, error } = await sb
-    .from("staff_messages")
-    .select("*")
-    .eq("conversation_id", conversationId)
-    .order("created_at", { ascending: true });
-  if (error) throw new Error(error.message);
-  return (data ?? []).map((r) => messageFromRow(r as never));
+  const rows = await fetchAllRows<MessageRow>((from, to) =>
+    sb
+      .from("staff_messages")
+      .select("*")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: true })
+      .range(from, to)
+  );
+  return rows.map((r) => messageFromRow(r as never));
 }
 
 export async function appendMessage(
@@ -223,7 +273,23 @@ export async function syncAgentMetadataFromSeed(): Promise<void> {
   }
 
   for (const conv of seed.conversations) {
-    const row = conversationToRow(conv);
-    await sb.from("staff_conversations").upsert(row, { onConflict: "id" });
+    const existing = await getConversation(conv.id);
+    if (!existing) {
+      const { error } = await sb.from("staff_conversations").insert(conversationToRow(conv));
+      if (error) throw new Error(error.message);
+      continue;
+    }
+    // Metadata only — never overwrite last_message (chat history preview).
+    const { error } = await sb
+      .from("staff_conversations")
+      .update({
+        name: conv.name,
+        type: conv.type,
+        agent_ids: conv.agentIds,
+        orchestrated: conv.orchestrated ?? false,
+        is_main_group: conv.isMainGroup ?? false,
+      })
+      .eq("id", conv.id);
+    if (error) throw new Error(error.message);
   }
 }

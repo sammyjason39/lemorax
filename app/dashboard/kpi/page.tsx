@@ -32,7 +32,7 @@ function HeatmapCell({ value }: { value: number }) {
 }
 
 export default function KPIPage() {
-  const { periodeStart, periodeEnd, cabang } = useFilters();
+  const { periodeStart, periodeEnd, resolvedPeriodeEnd, cabang } = useFilters();
   const params = new URLSearchParams({
     periode_start: periodeStart, periode_end: periodeEnd,
     ...(cabang.length ? { cabang: cabang.join(",") } : {}),
@@ -49,7 +49,7 @@ export default function KPIPage() {
   ];
 
   // Build heatmap months (last 6)
-  const [ey, em] = periodeEnd.split("-").map(Number);
+  const [ey, em] = resolvedPeriodeEnd.split("-").map(Number);
   const heatmapMonths: string[] = [];
   for (let i = 5; i >= 0; i--) {
     const d = new Date(ey, em - 1 - i, 1);

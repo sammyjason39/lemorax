@@ -8,6 +8,7 @@ import type { StaffAgent, StaffConversation, StaffMessage } from "@/lib/staff-ag
 import { AgentAvatar, GroupAvatar } from "@/components/staff-agents/AgentAvatar";
 import { getChatLabel, getDisplayName, getMentionTag, filterMentionSuggestions } from "@/lib/staff-agents/names";
 import { brand } from "@/lib/brand";
+import { sanitizeAgentContent } from "@/lib/staff-agents/stream";
 
 type Props = {
   conversation: StaffConversation;
@@ -17,6 +18,7 @@ type Props = {
   sending: boolean;
   streamingAgentId?: string | null;
   streamingContent?: string;
+  agentProcessing?: boolean;
   a2aHandoff?: { from: string; to: string } | null;
 };
 
@@ -32,6 +34,7 @@ export function ChatThread({
   sending,
   streamingAgentId,
   streamingContent,
+  agentProcessing,
   a2aHandoff,
 }: Props) {
   const [input, setInput] = useState("");
@@ -184,7 +187,9 @@ export function ChatThread({
                     <p className="whitespace-pre-wrap">{msg.content}</p>
                   ) : (
                     <div className="prose prose-sm dark:prose-invert max-w-none">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {sanitizeAgentContent(msg.content)}
+                      </ReactMarkdown>
                     </div>
                   )}
                 </div>
@@ -196,7 +201,7 @@ export function ChatThread({
           );
         })}
 
-        {streamingAgentId && streamingContent !== undefined && (
+        {streamingAgentId && (agentProcessing || streamingContent !== undefined) && (
           <div className="flex gap-2">
             {agentMap[streamingAgentId] && (
               <AgentAvatar agent={agentMap[streamingAgentId]} size={32} />
@@ -206,7 +211,10 @@ export function ChatThread({
                 className="text-[10px] font-medium px-1"
                 style={{ color: agentMap[streamingAgentId]?.avatarColor }}
               >
-                {agentMap[streamingAgentId] ? getChatLabel(agentMap[streamingAgentId]) : ""} · mengetik...
+                {agentMap[streamingAgentId] ? getChatLabel(agentMap[streamingAgentId]) : ""}
+                {agentProcessing && !streamingContent
+                  ? " · Processing..."
+                  : " · mengetik..."}
               </span>
               <div
                 className="px-3 py-2 rounded-2xl rounded-tl-sm text-sm"
@@ -215,9 +223,28 @@ export function ChatThread({
                   border: "1px solid var(--border)",
                 }}
               >
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{streamingContent || "..."}</ReactMarkdown>
-                </div>
+                {agentProcessing && !streamingContent ? (
+                  <div className="flex items-center gap-1.5 py-0.5">
+                    {[0, 1, 2].map((i) => (
+                      <div
+                        key={i}
+                        className="rounded-full"
+                        style={{
+                          width: 5,
+                          height: 5,
+                          background: agentMap[streamingAgentId]?.avatarColor ?? brand.blue,
+                          animation: `bounce 1.1s ${i * 0.15}s ease-in-out infinite`,
+                        }}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {streamingContent || "..."}
+                    </ReactMarkdown>
+                  </div>
+                )}
               </div>
             </div>
           </div>

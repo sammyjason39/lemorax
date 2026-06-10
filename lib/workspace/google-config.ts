@@ -1,3 +1,6 @@
+import type { NextRequest } from "next/server";
+import { buildAppUrl } from "@/lib/app-url";
+
 export const WORKSPACE_ID = "default";
 
 export const GOOGLE_CALENDAR_SCOPES = [
@@ -5,20 +8,13 @@ export const GOOGLE_CALENDAR_SCOPES = [
   "https://www.googleapis.com/auth/userinfo.email",
 ];
 
-export function getGoogleRedirectUri(): string {
+export function getGoogleRedirectUri(req?: NextRequest, requestOrigin?: string): string {
   const explicit = process.env.GOOGLE_REDIRECT_URI?.trim();
   if (explicit) return explicit;
-
-  const base = (
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.ARIES_BASE_URL ||
-    "http://localhost:3000"
-  ).replace(/\/$/, "");
-
-  return `${base}/api/workspace/google/callback`;
+  return buildAppUrl("/api/workspace/google/callback", req, requestOrigin);
 }
 
-export function getGoogleOAuthConfig() {
+export function getGoogleOAuthConfig(req?: NextRequest, requestOrigin?: string) {
   const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
   if (!clientId || !clientSecret) {
@@ -26,7 +22,7 @@ export function getGoogleOAuthConfig() {
       "GOOGLE_CLIENT_ID dan GOOGLE_CLIENT_SECRET belum dikonfigurasi di .env.local"
     );
   }
-  return { clientId, clientSecret, redirectUri: getGoogleRedirectUri() };
+  return { clientId, clientSecret, redirectUri: getGoogleRedirectUri(req, requestOrigin) };
 }
 
 export function isGoogleCalendarConfigured(): boolean {

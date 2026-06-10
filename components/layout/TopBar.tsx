@@ -2,6 +2,7 @@
 
 import { useFilters } from "@/contexts/FilterContext";
 import { formatPeriode } from "@/lib/formatters";
+import { formatPeriodeFilter } from "@/lib/periode";
 import { Calendar, Building2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
@@ -15,7 +16,7 @@ interface TopBarProps {
 
 export function TopBar({ title, subtitle }: TopBarProps) {
   const { periodeStart, periodeEnd, cabang } = useFilters();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   return (
     <header
@@ -47,7 +48,7 @@ export function TopBar({ title, subtitle }: TopBarProps) {
         >
           <Calendar size={13} />
           <span>
-            {formatPeriode(periodeStart)} — {formatPeriode(periodeEnd)}
+            {formatPeriode(periodeStart)} — {formatPeriodeFilter(periodeEnd, language)}
           </span>
         </div>
 

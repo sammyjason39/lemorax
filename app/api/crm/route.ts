@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase";
+import { resolvePeriode, DEFAULT_PERIODE_START, CURRENT_PERIODE_VALUE } from "@/lib/periode";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const ps = searchParams.get("periode_start") || "2024-01";
-  const pe = searchParams.get("periode_end") || "2026-04";
+  const ps = searchParams.get("periode_start") || DEFAULT_PERIODE_START;
+  const pe = resolvePeriode(searchParams.get("periode_end") || CURRENT_PERIODE_VALUE);
   const cabangParam = searchParams.get("cabang") || "";
   const cabang = cabangParam ? cabangParam.split(",") : [];
   const statusParam = searchParams.get("status") || "";

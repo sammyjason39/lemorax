@@ -5,10 +5,12 @@ import { isOrchestratedConversation, runOrchestratedConversationChat } from "@/l
 import { getChatLabel } from "@/lib/staff-agents/names";
 import { PRINCIPAL_NAME } from "@/lib/brand";
 import type { StaffMessage } from "@/lib/staff-agents/types";
+import { sanitizeAgentContent } from "@/lib/staff-agents/stream";
 
 export type StaffChatSSEEvent =
   | { type: "user_message"; message: StaffMessage }
   | { type: "agent_start"; agentId: string; agentName: string }
+  | { type: "agent_processing"; agentId: string }
   | { type: "agent_chunk"; agentId: string; content: string }
   | { type: "agent_message"; message: StaffMessage }
   | { type: "a2a_handoff"; fromAgentId: string; toAgentId: string; task: string }
@@ -48,13 +50,19 @@ export async function* runStaffConversationChat(
     let full = "";
     try {
       for await (const chunk of streamStaffAgentReply(agent, userText, history)) {
-        full += chunk;
-        yield { type: "agent_chunk", agentId: agent.id, content: chunk };
+        if (chunk.kind === "processing") {
+          yield { type: "agent_processing", agentId: agent.id };
+          continue;
+        }
+        full += chunk.content;
+        yield { type: "agent_chunk", agentId: agent.id, content: chunk.content };
       }
     } catch (err) {
       full = `⚠️ ${err instanceof Error ? err.message : "Agent error"}`;
       yield { type: "agent_chunk", agentId: agent.id, content: full };
     }
+
+    full = sanitizeAgentContent(full);
 
     const agentMsg = await appendMessage({
       conversationId,

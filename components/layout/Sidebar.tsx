@@ -21,6 +21,11 @@ import { useFilters } from "@/contexts/FilterContext";
 import { useState } from "react";
 import { CABANG_LIST } from "@/types";
 import { formatPeriode } from "@/lib/formatters";
+import {
+  CURRENT_PERIODE_VALUE,
+  generatePeriodeMonths,
+  formatPeriodeFilter,
+} from "@/lib/periode";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { TranslationKey } from "@/lib/translations";
 import { AriesLogo } from "@/components/ui/AriesLogo";
@@ -54,19 +59,13 @@ const NAV_ITEMS: { href: string; labelKey: TranslationKey; icon: any; badge?: st
   },
 ];
 
-const MONTHS = [
-  "2024-01","2024-02","2024-03","2024-04","2024-05","2024-06",
-  "2024-07","2024-08","2024-09","2024-10","2024-11","2024-12",
-  "2025-01","2025-02","2025-03","2025-04","2025-05","2025-06",
-  "2025-07","2025-08","2025-09","2025-10","2025-11","2025-12",
-  "2026-01","2026-02","2026-03","2026-04",
-];
+const MONTHS = generatePeriodeMonths();
 
 export function Sidebar() {
   const pathname = usePathname();
   const { periodeStart, periodeEnd, cabang, setPeriodeStart, setPeriodeEnd, setCabang, resetFilters } =
     useFilters();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [cabangOpen, setCabangOpen] = useState(false);
 
   const toggleCabang = (c: string) => {
@@ -167,6 +166,9 @@ export function Sidebar() {
                 color: "var(--text-primary)",
               }}
             >
+              <option value={CURRENT_PERIODE_VALUE}>
+                {formatPeriodeFilter(CURRENT_PERIODE_VALUE, language)}
+              </option>
               {MONTHS.map((m) => (
                 <option key={m} value={m}>{formatPeriode(m)}</option>
               ))}

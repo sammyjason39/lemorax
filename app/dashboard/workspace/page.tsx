@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import useSWR from "swr";
+import useSWR, { mutate as globalMutate } from "swr";
 import { useSearchParams, useRouter } from "next/navigation";
 import { TopBar } from "@/components/layout/TopBar";
 import { WorkspaceConnections } from "@/components/workspace/WorkspaceConnections";
@@ -113,6 +113,8 @@ export default function WorkspacePage() {
     const error = searchParams.get("error");
     if (composio === "connected") {
       setTab("connections");
+      void globalMutate("/api/composio/status");
+      window.setTimeout(() => void globalMutate("/api/composio/status"), 2000);
       router.replace("/dashboard/workspace");
     } else if (connected || error) {
       setTab("calendar");
@@ -176,7 +178,7 @@ export default function WorkspacePage() {
     <div className="page-enter">
       <TopBar title={t("workspace.title")} subtitle={t("workspace.subtitle")} />
 
-      <div className="px-6 pt-4 max-w-6xl">
+      <div className={`px-6 pt-4 ${tab === "connections" ? "max-w-7xl" : "max-w-6xl"}`}>
         <div
           className="inline-flex rounded-xl p-1 text-xs font-medium border"
           style={{ background: "var(--bg-secondary)", borderColor: "var(--border)" }}
@@ -200,7 +202,7 @@ export default function WorkspacePage() {
         </div>
       </div>
 
-      <div className="p-6 space-y-6 max-w-6xl">
+      <div className={`p-6 space-y-6 ${tab === "connections" ? "max-w-7xl" : "max-w-6xl"}`}>
         {tab === "connections" && <WorkspaceConnections />}
 
         {tab === "calendar" && (

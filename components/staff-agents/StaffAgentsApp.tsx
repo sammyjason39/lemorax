@@ -9,7 +9,8 @@ import type { StaffAgent, StaffConversation, StaffMessage } from "@/lib/staff-ag
 import { X } from "lucide-react";
 import { brand } from "@/lib/brand";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+const fetcher = (url: string) =>
+  fetch(url, { cache: "no-store" }).then((r) => r.json());
 
 type Tab = "chats" | "agents";
 
@@ -21,6 +22,7 @@ export function StaffAgentsApp() {
   const [sending, setSending] = useState(false);
   const [streamingAgentId, setStreamingAgentId] = useState<string | null>(null);
   const [streamingContent, setStreamingContent] = useState("");
+  const [agentProcessing, setAgentProcessing] = useState(false);
   const [showNewGroup, setShowNewGroup] = useState(false);
   const [groupName, setGroupName] = useState("");
   const [groupAgentIds, setGroupAgentIds] = useState<string[]>([]);
@@ -45,9 +47,12 @@ export function StaffAgentsApp() {
   const selectedAgent = agents.find((a) => a.id === selectedAgentId) ?? null;
 
   const loadMessages = useCallback(async (conversationId: string) => {
-    const res = await fetch(`/api/staff-agents/conversations/${conversationId}/messages`);
+    const res = await fetch(`/api/staff-agents/conversations/${conversationId}/messages`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return;
     const data = await res.json();
-    setMessages(data.messages ?? []);
+    if (Array.isArray(data.messages)) setMessages(data.messages);
   }, []);
 
   useEffect(() => {
@@ -81,6 +86,7 @@ export function StaffAgentsApp() {
     setSending(true);
     setStreamingAgentId(null);
     setStreamingContent("");
+    setAgentProcessing(false);
     setA2aHandoff(null);
 
     const optimistic: StaffMessage = {
@@ -134,7 +140,13 @@ export function StaffAgentsApp() {
               setStreamingAgentId(event.agentId);
               agentBuffers[event.agentId] = "";
               setStreamingContent("");
+              setAgentProcessing(false);
+            } else if (event.type === "agent_processing" && event.agentId) {
+              setStreamingAgentId(event.agentId);
+              setAgentProcessing(true);
+              setStreamingContent("");
             } else if (event.type === "agent_chunk" && event.agentId && event.content) {
+              setAgentProcessing(false);
               agentBuffers[event.agentId] = (agentBuffers[event.agentId] || "") + event.content;
               setStreamingContent(agentBuffers[event.agentId]);
             } else if (event.type === "agent_message" && event.message) {
@@ -164,6 +176,7 @@ export function StaffAgentsApp() {
       setSending(false);
       setStreamingAgentId(null);
       setStreamingContent("");
+      setAgentProcessing(false);
       setA2aHandoff(null);
     }
   };
@@ -273,6 +286,7 @@ export function StaffAgentsApp() {
             sending={sending}
             streamingAgentId={streamingAgentId}
             streamingContent={streamingContent}
+            agentProcessing={agentProcessing}
             a2aHandoff={a2aHandoff}
           />
         ) : (

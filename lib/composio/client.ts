@@ -1,5 +1,8 @@
 import { Composio } from "@composio/core";
+import type { NextRequest } from "next/server";
+import { buildAppUrl } from "@/lib/app-url";
 import {
+  ALL_WORKSPACE_INTEGRATIONS,
   COMPOSIO_USER_ID,
   isComposioConfigured,
 } from "@/lib/composio/config";
@@ -55,25 +58,82 @@ export async function authorizeComposioToolkit(
 }
 
 export function getComposioCallbackUrl(
-  returnPath = "/dashboard/workspace?composio=connected"
+  returnPath = "/dashboard/workspace?composio=connected",
+  req?: NextRequest,
+  requestOrigin?: string
 ): string {
-  const base = (
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.ARIES_BASE_URL ||
-    "http://localhost:3000"
-  ).replace(/\/$/, "");
-  const path = returnPath.startsWith("/") ? returnPath : `/${returnPath}`;
-  return `${base}${path}`;
+  return buildAppUrl(returnPath, req, requestOrigin);
 }
 
-export async function listComposioConnectedAccounts() {
-  const composio = getComposioClient();
+export type ComposioWorkspaceConnection = {
+  id: string;
+  toolkit: string;
+  status: string;
+  label: string | null;
+};
+
+const TOOLKIT_LABEL_TOOLS: Record<
+  string,
+  { tool: string; pick: (data: unknown) => string | null }
+> = {
+  gmail: {
+    tool: "GMAIL_GET_PROFILE",
+    pick: (data) => {
+      const row = data as { emailAddress?: string } | null | undefined;
+      return row?.emailAddress?.trim() || null;
+    },
+  },
+  googlecalendar: {
+    tool: "GOOGLECALENDAR_GET_CALENDAR",
+    pick: (data) => {
+      const row = data as { calendar_data?: { id?: string; summary?: string } } | null | undefined;
+      return row?.calendar_data?.id?.trim() || row?.calendar_data?.summary?.trim() || null;
+    },
+  },
+};
+
+async function resolveToolkitAccountLabel(
+  session: Awaited<ReturnType<typeof getComposioToolRouterSession>>,
+  toolkitSlug: string
+): Promise<string | null> {
+  const resolver = TOOLKIT_LABEL_TOOLS[toolkitSlug];
+  if (!resolver) return null;
   try {
-    const result = await composio.connectedAccounts.list({
-      userIds: [COMPOSIO_USER_ID],
-      limit: 50,
+    const result = await session.execute(resolver.tool, {});
+    if (result.error) return null;
+    return resolver.pick(result.data);
+  } catch {
+    return null;
+  }
+}
+
+/** Active platform connections for the Tool Router session (OAuth binds here, not userIds). */
+export async function listComposioConnectedAccounts(): Promise<ComposioWorkspaceConnection[]> {
+  try {
+    const session = await getComposioToolRouterSession();
+    const slugs = ALL_WORKSPACE_INTEGRATIONS.map((i) => i.slug);
+    const result = await session.toolkits({ toolkits: slugs, limit: 50 });
+
+    const active = (result.items ?? []).filter((item) => {
+      const status = item.connection?.connectedAccount?.status?.toUpperCase();
+      return item.connection?.isActive === true || status === "ACTIVE";
     });
-    return result.items ?? [];
+
+    const connections = await Promise.all(
+      active.map(async (item) => {
+        const toolkit = item.slug.toLowerCase();
+        const status = item.connection?.connectedAccount?.status ?? "ACTIVE";
+        const label = await resolveToolkitAccountLabel(session, toolkit);
+        return {
+          id: item.connection?.connectedAccount?.id ?? "",
+          toolkit,
+          status,
+          label,
+        };
+      })
+    );
+
+    return connections;
   } catch {
     return [];
   }

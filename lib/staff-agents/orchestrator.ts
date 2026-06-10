@@ -21,6 +21,7 @@ import {
 } from "@/lib/staff-agents/store";
 import { streamStaffAgentReply, collectStaffAgentReply } from "@/lib/staff-agents/llm";
 import type { StaffChatSSEEvent } from "@/lib/staff-agents/chat";
+import { sanitizeAgentContent } from "@/lib/staff-agents/stream";
 
 const MAX_CROSS_TALK_ROUNDS = 3;
 
@@ -68,13 +69,19 @@ async function* streamAndSaveAgentReply(params: {
   let full = "";
   try {
     for await (const chunk of streamStaffAgentReply(agent, prompt, history, team)) {
-      full += chunk;
-      yield { type: "agent_chunk", agentId: agent.id, content: chunk };
+      if (chunk.kind === "processing") {
+        yield { type: "agent_processing", agentId: agent.id };
+        continue;
+      }
+      full += chunk.content;
+      yield { type: "agent_chunk", agentId: agent.id, content: chunk.content };
     }
   } catch (err) {
     full = `⚠️ ${err instanceof Error ? err.message : "Error"}`;
     yield { type: "agent_chunk", agentId: agent.id, content: full };
   }
+
+  full = sanitizeAgentContent(full);
 
   const mentions = parseMentions(full, team);
 
@@ -236,7 +243,9 @@ Ringkas jawaban tim untuk ${PRINCIPAL_NAME}. Sebut kontributor dengan @Tag. Max 
 
     let closing = "";
     try {
-      closing = await collectStaffAgentReply(ea, closingPrompt, history, allAgents);
+      closing = sanitizeAgentContent(
+        await collectStaffAgentReply(ea, closingPrompt, history, allAgents)
+      );
     } catch (err) {
       closing = `Tim sudah merespons di atas. ${err instanceof Error ? err.message : ""}`;
     }

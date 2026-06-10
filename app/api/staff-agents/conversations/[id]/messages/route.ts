@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { listMessages } from "@/lib/staff-agents/store";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 type Ctx = { params: { id: string } };
 

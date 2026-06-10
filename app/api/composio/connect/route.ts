@@ -13,7 +13,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const body = (await req.json()) as { toolkit?: string; returnPath?: string };
+    const body = (await req.json()) as {
+      toolkit?: string;
+      returnPath?: string;
+      origin?: string;
+    };
     const slug = body.toolkit?.trim().toLowerCase();
     if (!slug) {
       return NextResponse.json({ error: "toolkit wajib diisi" }, { status: 400 });
@@ -23,9 +27,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Toolkit '${slug}' tidak didukung` }, { status: 400 });
     }
 
-    const callbackUrl = body.returnPath
-      ? getComposioCallbackUrl(body.returnPath)
-      : undefined;
+    const returnPath = body.returnPath || "/dashboard/workspace?composio=connected";
+    const callbackUrl = getComposioCallbackUrl(returnPath, req, body.origin);
 
     const { redirectUrl, connectionRequestId } = await authorizeComposioToolkit(slug, callbackUrl);
     return NextResponse.json({ redirectUrl, connectionRequestId, toolkit: slug });

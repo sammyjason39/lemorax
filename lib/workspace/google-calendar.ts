@@ -1,4 +1,5 @@
 import { google } from "googleapis";
+import type { NextRequest } from "next/server";
 import { getGoogleOAuthConfig, GOOGLE_CALENDAR_SCOPES } from "@/lib/workspace/google-config";
 import {
   getGoogleCalendarConnection,
@@ -18,13 +19,13 @@ export type CalendarEvent = {
   status?: string;
 };
 
-function createOAuthClient() {
-  const { clientId, clientSecret, redirectUri } = getGoogleOAuthConfig();
+function createOAuthClient(req?: NextRequest, requestOrigin?: string) {
+  const { clientId, clientSecret, redirectUri } = getGoogleOAuthConfig(req, requestOrigin);
   return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 }
 
-export function getGoogleAuthUrl(state: string): string {
-  const client = createOAuthClient();
+export function getGoogleAuthUrl(state: string, req?: NextRequest, requestOrigin?: string): string {
+  const client = createOAuthClient(req, requestOrigin);
   return client.generateAuthUrl({
     access_type: "offline",
     prompt: "consent",
@@ -34,8 +35,12 @@ export function getGoogleAuthUrl(state: string): string {
   });
 }
 
-export async function exchangeGoogleCode(code: string) {
-  const client = createOAuthClient();
+export async function exchangeGoogleCode(
+  code: string,
+  req?: NextRequest,
+  requestOrigin?: string
+) {
+  const client = createOAuthClient(req, requestOrigin);
   const { tokens } = await client.getToken(code);
   if (!tokens.refresh_token) {
     throw new Error("Google tidak mengembalikan refresh_token. Cabut akses app di Google Account lalu connect ulang.");

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createConversation, listConversations } from "@/lib/staff-agents/store";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   const conversations = await listConversations();

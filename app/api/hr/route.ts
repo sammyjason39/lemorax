@@ -1,57 +1,98 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabase";
+import { createServerSupabaseClient, fetchAllRows } from "@/lib/supabase";
+import { resolvePeriode, DEFAULT_PERIODE_START, CURRENT_PERIODE_VALUE } from "@/lib/periode";
+
+function buildTrendMonths(endPeriode: string, count = 12): string[] {
+  const [ey, em] = endPeriode.split("-").map(Number);
+  const months: string[] = [];
+  for (let i = count - 1; i >= 0; i--) {
+    const d = new Date(ey, em - 1 - i, 1);
+    months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+  }
+  return months;
+}
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const ps = searchParams.get("periode_start") || "2024-01";
-  const pe = searchParams.get("periode_end") || "2026-04";
+  const ps = searchParams.get("periode_start") || DEFAULT_PERIODE_START;
+  const pe = resolvePeriode(searchParams.get("periode_end") || CURRENT_PERIODE_VALUE);
   const cabangParam = searchParams.get("cabang") || "";
   const cabang = cabangParam ? cabangParam.split(",") : [];
 
   const sb = createServerSupabaseClient();
   try {
-    let q = sb.from("absensi").select("*").gte("periode", ps).lte("periode", pe).limit(30000);
-    if (cabang.length) q = q.in("cabang", cabang);
-    const { data: all } = await q;
-    const allData = all || [];
+    const trendMonths = buildTrendMonths(pe).filter((m) => m >= ps && m <= pe);
 
-    // Summary
-    const totalHadir = allData.reduce((s, r) => s + (r.hadir || 0), 0);
-    const totalHariKerja = allData.reduce((s, r) => s + (r.total_hari_kerja || 0), 0);
+    const [periodData, trendData, employeesRes] = await Promise.all([
+      fetchAllRows<any>((from, to) => {
+        let q = sb.from("absensi").select("*").eq("periode", pe).range(from, to);
+        if (cabang.length) q = q.in("cabang", cabang);
+        return q;
+      }),
+      trendMonths.length
+        ? fetchAllRows<any>((from, to) => {
+            let q = sb.from("absensi").select("periode,hadir,sakit,izin,alfa").in("periode", trendMonths).range(from, to);
+            if (cabang.length) q = q.in("cabang", cabang);
+            return q;
+          })
+        : Promise.resolve([]),
+      sb.from("employees").select("id", { count: "exact", head: true }).eq("status", "Aktif"),
+    ]);
+
+    const totalKaryawan = employeesRes.count ?? 0;
+
+    // Summary — end period only
+    const totalHadir = periodData.reduce((s, r) => s + (r.hadir || 0), 0);
+    const totalHariKerja = periodData.reduce((s, r) => s + (r.total_hari_kerja || 0), 0);
     const avgKehadiran = totalHariKerja > 0 ? (totalHadir / totalHariKerja) * 100 : 0;
-    const totalSakit = allData.reduce((s, r) => s + (r.sakit || 0), 0);
-    const totalAlfa = allData.reduce((s, r) => s + (r.alfa || 0), 0);
-    const totalTerlambat = allData.reduce((s, r) => s + (r.terlambat || 0), 0);
+    const totalSakit = periodData.reduce((s, r) => s + (r.sakit || 0), 0);
+    const totalAlfa = periodData.reduce((s, r) => s + (r.alfa || 0), 0);
+    const totalTerlambat = periodData.reduce((s, r) => s + (r.terlambat || 0), 0);
 
-    // Per cabang (last period)
+    // Kehadiran per cabang — end period
     const cabangMap: Record<string, { hadir: number; total: number }> = {};
-    allData.filter((r) => r.periode === pe).forEach((r) => {
+    periodData.forEach((r) => {
       if (!cabangMap[r.cabang]) cabangMap[r.cabang] = { hadir: 0, total: 0 };
       cabangMap[r.cabang].hadir += r.hadir || 0;
       cabangMap[r.cabang].total += r.total_hari_kerja || 0;
     });
-    const kehadiranPerCabang = Object.entries(cabangMap).map(([cabang, v]) => ({
-      cabang,
-      pct: v.total > 0 ? (v.hadir / v.total) * 100 : 0,
-    }));
+    const kehadiranPerCabang = Object.entries(cabangMap)
+      .map(([cabangName, v]) => ({
+        cabang: cabangName,
+        pct: v.total > 0 ? Math.round((v.hadir / v.total) * 1000) / 10 : 0,
+      }))
+      .sort((a, b) => b.pct - a.pct);
 
-    // Monthly trend
+    // Monthly trend — last 12 months
     const monthlyMap: Record<string, { hadir: number; sakit: number; izin: number; alfa: number }> = {};
-    allData.forEach((r) => {
-      if (!monthlyMap[r.periode]) monthlyMap[r.periode] = { hadir: 0, sakit: 0, izin: 0, alfa: 0 };
+    trendMonths.forEach((m) => {
+      monthlyMap[m] = { hadir: 0, sakit: 0, izin: 0, alfa: 0 };
+    });
+    trendData.forEach((r) => {
+      if (!monthlyMap[r.periode]) return;
       monthlyMap[r.periode].hadir += r.hadir || 0;
       monthlyMap[r.periode].sakit += r.sakit || 0;
       monthlyMap[r.periode].izin += r.izin || 0;
       monthlyMap[r.periode].alfa += r.alfa || 0;
     });
-    const trend = Object.entries(monthlyMap).sort(([a], [b]) => a.localeCompare(b))
-      .map(([periode, v]) => ({ periode, ...v }));
+    const trend = trendMonths.map((periode) => ({ periode, ...monthlyMap[periode] }));
 
-    // Employee attendance table (last period)
+    // Employee attendance table — end period, dedupe by employee_id
     const empMap: Record<string, any> = {};
-    allData.filter((r) => r.periode === pe).forEach((r) => {
+    periodData.forEach((r) => {
       if (!empMap[r.employee_id]) {
-        empMap[r.employee_id] = { employee_id: r.employee_id, nama: r.nama, cabang: r.cabang, jabatan: r.jabatan, hadir: 0, sakit: 0, izin: 0, alfa: 0, terlambat: 0, total: 0 };
+        empMap[r.employee_id] = {
+          employee_id: r.employee_id,
+          nama: r.nama,
+          cabang: r.cabang,
+          jabatan: r.jabatan,
+          hadir: 0,
+          sakit: 0,
+          izin: 0,
+          alfa: 0,
+          terlambat: 0,
+          total: 0,
+        };
       }
       empMap[r.employee_id].hadir += r.hadir || 0;
       empMap[r.employee_id].sakit += r.sakit || 0;
@@ -60,16 +101,18 @@ export async function GET(req: NextRequest) {
       empMap[r.employee_id].terlambat += r.terlambat || 0;
       empMap[r.employee_id].total += r.total_hari_kerja || 0;
     });
-    const employeeList = Object.values(empMap).map((e: any) => ({
-      ...e,
-      kehadiran_pct: e.total > 0 ? (e.hadir / e.total) * 100 : 0,
-    })).sort((a: any, b: any) => a.kehadiran_pct - b.kehadiran_pct);
+    const employeeList = Object.values(empMap)
+      .map((e: any) => ({
+        ...e,
+        kehadiran_pct: e.total > 0 ? Math.round((e.hadir / e.total) * 1000) / 10 : 0,
+      }))
+      .sort((a: any, b: any) => a.kehadiran_pct - b.kehadiran_pct);
 
-    // Birthdays this month from employees
+    // Birthdays this month from CRM owners
     const thisMonth = new Date().getMonth() + 1;
-    const { data: employees } = await sb.from("employees").select("nama_lengkap, jabatan, cabang, tanggal_bergabung");
-    // Birthday from CRM owners
-    const { data: crmOwners } = await sb.from("crm").select("nama_owner, jabatan_owner, cabang_handler, tanggal_lahir_owner")
+    const { data: crmOwners } = await sb
+      .from("crm")
+      .select("nama_owner, jabatan_owner, cabang_handler, tanggal_lahir_owner")
       .not("tanggal_lahir_owner", "is", null);
 
     const birthdays: any[] = [];
@@ -77,13 +120,25 @@ export async function GET(req: NextRequest) {
       if (r.tanggal_lahir_owner) {
         const m = new Date(r.tanggal_lahir_owner).getMonth() + 1;
         if (m === thisMonth) {
-          birthdays.push({ nama: r.nama_owner, jabatan: r.jabatan_owner, cabang: r.cabang_handler, tanggal: r.tanggal_lahir_owner, type: "Client" });
+          birthdays.push({
+            nama: r.nama_owner,
+            jabatan: r.jabatan_owner,
+            cabang: r.cabang_handler,
+            tanggal: r.tanggal_lahir_owner,
+            type: "Client",
+          });
         }
       }
     });
 
     return NextResponse.json({
-      summary: { avgKehadiran: Math.round(avgKehadiran * 10) / 10, totalSakit, totalAlfa, totalTerlambat, totalKaryawan: Object.keys(empMap).length },
+      summary: {
+        avgKehadiran: Math.round(avgKehadiran * 10) / 10,
+        totalSakit,
+        totalAlfa,
+        totalTerlambat,
+        totalKaryawan,
+      },
       kehadiranPerCabang,
       trend,
       employeeList,
