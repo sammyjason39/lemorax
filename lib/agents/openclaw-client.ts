@@ -2,6 +2,7 @@ import type { OpenClawChatEvent, OpenClawChatInput, OpenClawClient } from "./typ
 import { OpenClawGateway } from "./openclaw-gateway";
 import { runOpenClawCli } from "./openclaw-cli";
 import { buildOpenClawBusinessMessage } from "./openclaw-prompt";
+import { retrieveVaultRAG } from "@/lib/vault/rag";
 
 function getGatewayUrl(): string {
   return process.env.OPENCLAW_GATEWAY_URL || "ws://127.0.0.1:18789";
@@ -41,9 +42,16 @@ async function* chatViaWebSocket(input: OpenClawChatInput): AsyncGenerator<OpenC
     await gateway.connect();
     yield { type: "message_start" };
 
+    const vault = await retrieveVaultRAG(input.message).catch(() => ({
+      context: "",
+      noteCount: 0,
+      chunkCount: 0,
+      titles: [],
+    }));
+
     for await (const event of gateway.streamChat({
       sessionKey: resolveSessionKey(input),
-      message: buildOpenClawBusinessMessage(input.message),
+      message: buildOpenClawBusinessMessage(input.message, vault.context),
       agentId: input.agentId || getDefaultAgentId(),
     })) {
       if (event.type === "chunk") yield event;

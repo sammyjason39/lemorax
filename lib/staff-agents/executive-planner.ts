@@ -1,5 +1,6 @@
 import type { StaffAgent, StaffMessage } from "@/lib/staff-agents/types";
 import { buildTeamRoster, EXECUTIVE_ASSISTANT_ID, getDisplayName, parseMentions, resolveAgentId, PRINCIPAL_NAME } from "@/lib/staff-agents/names";
+import { retrieveVaultRAG } from "@/lib/vault/rag";
 
 function getQwenApiUrl(): string {
   const base = process.env.QWEN_API_BASE_URL?.replace(/\/$/, "");
@@ -50,6 +51,13 @@ export async function planOrchestration(
       ? `\n${PRINCIPAL_NAME} explicitly mentioned agent ids: ${userMentions.join(", ")} — include them in delegations.`
       : "";
 
+  const vault = await retrieveVaultRAG(userMessage).catch(() => ({
+    context: "",
+    noteCount: 0,
+    chunkCount: 0,
+    titles: [] as string[],
+  }));
+
   const response = await fetch(getQwenApiUrl(), {
     method: "POST",
     headers: {
@@ -82,11 +90,12 @@ Rules:
 - Pilih 0-3 delegations paling relevan
 - agentId harus dari roster
 - Jika pertanyaan general/sapa, delegations boleh []
-- enable_cross_talk true di group, false di dm kecuali multi-domain`,
+- enable_cross_talk true di group, false di dm kecuali multi-domain
+- Jika Company Vault relevan, arahkan delegasi ke agent yang paling cocok dan sertakan konteks vault di task`,
         },
         {
           role: "user",
-          content: `Riwayat:\n${historyText || "(kosong)"}\n\nPesan ${PRINCIPAL_NAME}: ${userMessage}${mentionHint}`,
+          content: `Riwayat:\n${historyText || "(kosong)"}\n\n${vault.context ? `${vault.context}\n\n` : ""}Pesan ${PRINCIPAL_NAME}: ${userMessage}${mentionHint}`,
         },
       ],
       max_tokens: 800,

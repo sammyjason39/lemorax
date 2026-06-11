@@ -1,4 +1,10 @@
 import { PRINCIPAL_NAME } from "@/lib/brand";
+import { retrieveVaultRAG } from "@/lib/vault/rag";
+
+async function vaultContextBlock(userMessage: string): Promise<string> {
+  const rag = await retrieveVaultRAG(userMessage);
+  return rag.context ? `\n\n${rag.context}` : "";
+}
 
 function getQwenApiUrl(): string {
   const base = process.env.QWEN_API_BASE_URL?.replace(/\/$/, "");
@@ -73,6 +79,7 @@ export async function generateSQLQuery(userMessage: string): Promise<{
   initial_analysis: string;
 }> {
   const apiKey = getQwenApiKey();
+  const vaultBlock = await vaultContextBlock(userMessage);
 
   const response = await fetch(getQwenApiUrl(), {
     method: "POST",
@@ -83,7 +90,10 @@ export async function generateSQLQuery(userMessage: string): Promise<{
     body: JSON.stringify({
       model: MODEL,
       messages: [
-        { role: "system", content: ARIES_SYSTEM_PROMPT + "\n\n" + ARIES_SQL_PROMPT },
+        {
+          role: "system",
+          content: ARIES_SYSTEM_PROMPT + vaultBlock + "\n\n" + ARIES_SQL_PROMPT,
+        },
         {
           role: "user",
           content: `Pertanyaan: ${userMessage}\n\nKembalikan HANYA JSON valid dengan format: {"sql_query": "...", "explanation": "...", "initial_analysis": "..."}`,
@@ -110,6 +120,7 @@ export async function generateSQLQuery(userMessage: string): Promise<{
 
 export async function* streamDirectAnswer(userMessage: string): AsyncGenerator<string> {
   const apiKey = getQwenApiKey();
+  const vaultBlock = await vaultContextBlock(userMessage);
 
   const response = await fetch(getQwenApiUrl(), {
     method: "POST",
@@ -124,7 +135,8 @@ export async function* streamDirectAnswer(userMessage: string): AsyncGenerator<s
           role: "system",
           content:
             ARIES_SYSTEM_PROMPT +
-            `\n\nJawab pertanyaan ${PRINCIPAL_NAME} dengan ringkas dan profesional. Jika pertanyaan membutuhkan angka dari database, sarankan menanyakan data spesifik (cabang, periode, metrik).`,
+            vaultBlock +
+            `\n\nJawab pertanyaan ${PRINCIPAL_NAME} dengan ringkas dan profesional. Prioritaskan Company Vault untuk kebijakan/SOP/konteks internal. Jika pertanyaan membutuhkan angka dari database, sarankan menanyakan data spesifik (cabang, periode, metrik).`,
         },
         { role: "user", content: userMessage },
       ],
@@ -171,6 +183,7 @@ export async function* streamFinalAnswer(
   sqlQuery: string
 ): AsyncGenerator<string> {
   const apiKey = getQwenApiKey();
+  const vaultBlock = await vaultContextBlock(userMessage);
 
   const response = await fetch(getQwenApiUrl(), {
     method: "POST",
@@ -183,7 +196,7 @@ export async function* streamFinalAnswer(
       messages: [
         {
           role: "system",
-          content: ARIES_SYSTEM_PROMPT + "\n\n" + ARIES_FINAL_ANSWER_PROMPT,
+          content: ARIES_SYSTEM_PROMPT + vaultBlock + "\n\n" + ARIES_FINAL_ANSWER_PROMPT,
         },
         {
           role: "user",

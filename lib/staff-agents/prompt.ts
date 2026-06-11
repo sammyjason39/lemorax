@@ -33,8 +33,8 @@ export function buildStaffAgentSystemPrompt(
     : "";
 
   const vaultBlock = extras?.vaultContext?.trim()
-    ? `\n${extras.vaultContext}\n\nGunakan [[wikilink]] saat merujuk dokumen vault.`
-    : "";
+    ? `\n${extras.vaultContext}\n\n**Aturan Company Vault:** Jawab dengan fakta dari kutipan di atas jika relevan. Sebut sumber dengan [[wikilink]]. Jika vault tidak mencakup topik, katakan dengan jujur lalu gunakan data/SQL lain.`
+    : "\n\n(Company Vault kosong — belum ada dokumen internal terindeks.)";
 
   return `${ARIES_SYSTEM_PROMPT}
 

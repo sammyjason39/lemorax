@@ -10,8 +10,15 @@ TOOL WAJIB UNTUK DATA BISNIS:
 - Format Rupiah pakai titik (Rp 1.234.567), persentase pakai koma (85,5%).
 `;
 
-export function buildOpenClawBusinessMessage(userMessage: string): string {
-  return `${ARIES_SYSTEM_PROMPT}
+export function buildOpenClawBusinessMessage(
+  userMessage: string,
+  vaultContext = ""
+): string {
+  const vaultBlock = vaultContext.trim()
+    ? `\n\n${vaultContext}\n\nPrioritaskan fakta Company Vault untuk kebijakan/SOP/konteks internal.`
+    : "";
+
+  return `${ARIES_SYSTEM_PROMPT}${vaultBlock}
 
 ${TOOL_INSTRUCTION}
 

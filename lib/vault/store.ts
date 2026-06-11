@@ -193,37 +193,14 @@ export async function deleteVaultNote(id: string): Promise<void> {
 }
 
 export async function searchVaultNotes(query: string, limit = 5): Promise<VaultNote[]> {
-  const q = query.trim().toLowerCase();
-  if (!q) return [];
+  const { retrieveVaultRAG } = await import("@/lib/vault/rag");
+  const result = await retrieveVaultRAG(query, { maxNotes: limit, maxChunks: limit });
+  if (result.titles.length === 0) return [];
 
   const notes = await listVaultNotes();
-  const scored = notes
-    .map((n) => {
-      const hay = `${n.title} ${n.content} ${n.tags.join(" ")}`.toLowerCase();
-      const score =
-        (n.title.toLowerCase().includes(q) ? 3 : 0) +
-        (n.slug.includes(q) ? 2 : 0) +
-        (hay.includes(q) ? 1 : 0);
-      return { n, score };
-    })
-    .filter((x) => x.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit);
-
-  return scored.map((x) => x.n);
+  const titleSet = new Set(result.titles.map((t) => t.toLowerCase()));
+  return notes.filter((n) => titleSet.has(n.title.toLowerCase())).slice(0, limit);
 }
 
-export async function getVaultContextForQuery(query: string): Promise<string> {
-  const hits = await searchVaultNotes(query, 4);
-  if (hits.length === 0) return "";
-
-  const blocks = await Promise.all(
-    hits.map(async (n) => {
-      const full = await getVaultNote(n.id);
-      const backlinks = full?.inboundLinks.length ?? 0;
-      return `### [[${n.title}]] (${n.noteType})\n${n.content.slice(0, 1200)}\n_Backlinks: ${backlinks}_`;
-    })
-  );
-
-  return `## Company Vault (Obsidian)\n${blocks.join("\n\n")}`;
-}
+export { getVaultContextForQuery, retrieveVaultRAG } from "@/lib/vault/rag";
+export type { VaultRAGResult, VaultRAGOptions } from "@/lib/vault/rag";

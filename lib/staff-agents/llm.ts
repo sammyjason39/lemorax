@@ -7,8 +7,7 @@ import { streamComposioStaffReply } from "@/lib/staff-agents/composio-runner";
 import { PRINCIPAL_NAME } from "@/lib/brand";
 import type { StaffStreamChunk } from "@/lib/staff-agents/stream";
 import { isTextChunk } from "@/lib/staff-agents/stream";
-import { getAgentSkillPromptBlock } from "@/lib/staff-agents/skills/registry";
-import { getVaultContextForQuery } from "@/lib/vault/store";
+import { buildAgentPromptExtras } from "@/lib/staff-agents/agent-context";
 import { getSocialContextForAgent } from "@/lib/social-media/store";
 import { getContentPlanContextForAgent } from "@/lib/content-plan/store";
 import { CONTENT_PLAN_KEYWORDS, runSocaContentPlanTools } from "@/lib/content-plan/soca-runner";
@@ -32,19 +31,6 @@ const DATA_KEYWORDS =
 
 const SOCIAL_KEYWORDS =
   /\b(instagram|ig|social|sosmed|engagement|follower|followers|reach|impression|konten|posting|reels|tiktok|soca|konversi sosial|like|komentar|content plan|ide konten|script|kanban|caption)\b/i;
-
-const VAULT_KEYWORDS =
-  /\b(mom|minutes|meeting|rapat|dokumen|document|vault|notulen|sop|policy|kebijakan|obsidian)\b|\[\[/i;
-
-async function buildPromptExtras(agent: StaffAgent, userMessage: string) {
-  const [installedSkills, vaultContext] = await Promise.all([
-    getAgentSkillPromptBlock(agent.id).catch(() => ""),
-    VAULT_KEYWORDS.test(userMessage)
-      ? getVaultContextForQuery(userMessage).catch(() => "")
-      : Promise.resolve(""),
-  ]);
-  return { installedSkills, vaultContext };
-}
 
 function agentHasSqlSkill(agent: StaffAgent): boolean {
   return agent.skills.some((s) => s.id === "sql" || s.tags.includes("data"));
@@ -91,7 +77,7 @@ export async function* streamStaffAgentReply(
   }
 
   const apiKey = getQwenApiKey();
-  const extras = await buildPromptExtras(agent, userMessage);
+  const extras = await buildAgentPromptExtras(agent, userMessage);
   const systemPrompt = buildStaffAgentSystemPrompt(agent, team, extras);
   const historyText = formatConversationHistory(history, agent.id, team);
 

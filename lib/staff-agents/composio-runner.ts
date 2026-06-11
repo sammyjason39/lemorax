@@ -7,6 +7,7 @@ import {
   executeComposioToolCall,
   getComposioOpenAiTools,
 } from "@/lib/composio/client";
+import { buildAgentPromptExtras } from "@/lib/staff-agents/agent-context";
 import { buildStaffAgentSystemPrompt, formatConversationHistory } from "@/lib/staff-agents/prompt";
 import { getDisplayName } from "@/lib/staff-agents/names";
 import { PRINCIPAL_NAME } from "@/lib/brand";
@@ -82,7 +83,8 @@ export async function* streamComposioStaffReply(
   const tools = await getComposioOpenAiTools();
   const displayName = getDisplayName(agent);
   const historyText = formatConversationHistory(history, agent.id, team);
-  const persona = buildStaffAgentSystemPrompt(agent, team);
+  const extras = await buildAgentPromptExtras(agent, userMessage);
+  const persona = buildStaffAgentSystemPrompt(agent, team, extras);
 
   const messages: ChatMessage[] = [
     {
