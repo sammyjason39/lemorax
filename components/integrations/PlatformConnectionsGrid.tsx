@@ -8,7 +8,7 @@ import { ExternalLink, Link2, Loader2, Plug, RefreshCw } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { WorkspaceIntegrationGroup } from "@/lib/composio/integrations";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+const fetcher = (url: string) => fetch(url, { cache: "no-store" }).then((r) => r.json());
 
 type ComposioStatus = {
   configured: boolean;
@@ -55,15 +55,25 @@ export function PlatformConnectionsGrid({
   }, [mutate]);
 
   const handleConnect = useCallback(
-    async (toolkit: string) => {
+    async (toolkit: string, isReconnect = false) => {
       setConnecting(toolkit);
       setConnectError(null);
       try {
+        if (isReconnect) {
+          const ok = window.confirm(
+            lang === "id"
+              ? "Ganti akun? Koneksi lama akan diputus, lalu Anda login dengan akun baru."
+              : "Switch account? The current connection will be removed before signing in again."
+          );
+          if (!ok) return;
+        }
+
         const res = await fetch("/api/composio/connect", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             toolkit,
+            reconnect: true,
             returnPath,
             origin: typeof window !== "undefined" ? window.location.origin : undefined,
           }),
@@ -86,7 +96,7 @@ export function PlatformConnectionsGrid({
         void mutate();
       }
     },
-    [mutate, returnPath]
+    [mutate, returnPath, lang]
   );
 
   const connectedByToolkit = new Map(
@@ -181,7 +191,7 @@ export function PlatformConnectionsGrid({
                         key={tk.slug}
                         type="button"
                         disabled={!!connecting}
-                        onClick={() => void handleConnect(tk.slug)}
+                        onClick={() => void handleConnect(tk.slug, isConnected)}
                         className={`flex items-center gap-2 rounded-xl text-left border transition-all disabled:opacity-50 hover:shadow-sm ${
                           compact ? "px-2.5 py-2 text-[11px]" : "px-3 py-3 text-xs"
                         }`}
@@ -198,6 +208,11 @@ export function PlatformConnectionsGrid({
                             <div
                               className="text-[10px] truncate mt-0.5 font-medium"
                               style={{ color: brand.blue }}
+                              title={
+                                lang === "id"
+                                  ? "Klik untuk ganti akun"
+                                  : "Click to switch account"
+                              }
                             >
                               {accountLabel}
                             </div>

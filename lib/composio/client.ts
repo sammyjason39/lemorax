@@ -38,15 +38,73 @@ export async function getComposioToolRouterSession() {
     }
   }
 
+  return createComposioToolRouterSession();
+}
+
+/** New Tool Router session (clears pinned connected accounts from prior session). */
+export async function createComposioToolRouterSession() {
+  const composio = getComposioClient();
   const session = await composio.create(COMPOSIO_USER_ID);
   await saveComposioSessionId(session.sessionId);
   return session;
 }
 
+/** Remove all Composio connected accounts for one toolkit so reconnect uses the new OAuth identity. */
+export async function disconnectComposioToolkit(toolkitSlug: string): Promise<string[]> {
+  const composio = getComposioClient();
+  const slug = toolkitSlug.trim().toLowerCase();
+  const removed: string[] = [];
+
+  try {
+    const session = await getComposioToolRouterSession();
+    const result = await session.toolkits({ toolkits: [slug], limit: 10 });
+    for (const item of result.items ?? []) {
+      const id = item.connection?.connectedAccount?.id;
+      if (id) removed.push(id);
+    }
+  } catch {
+    // Session may be stale — still try global account list below
+  }
+
+  try {
+    const list = await composio.connectedAccounts.list({
+      userIds: [COMPOSIO_USER_ID],
+      toolkitSlugs: [slug],
+      limit: 20,
+    });
+    for (const row of list.items ?? []) {
+      if (row.id) removed.push(row.id);
+    }
+  } catch {
+    // list API shape may vary — proceed with session-derived ids
+  }
+
+  const uniqueIds = Array.from(new Set(removed.filter(Boolean)));
+  for (const id of uniqueIds) {
+    try {
+      await composio.connectedAccounts.delete(id);
+    } catch {
+      // Already deleted or inactive
+    }
+  }
+
+  if (uniqueIds.length > 0) {
+    await createComposioToolRouterSession();
+  }
+
+  return uniqueIds;
+}
+
 export async function authorizeComposioToolkit(
   toolkitSlug: string,
-  callbackUrl?: string
+  callbackUrl?: string,
+  options?: { reconnect?: boolean }
 ) {
+  const reconnect = options?.reconnect !== false;
+  if (reconnect) {
+    await disconnectComposioToolkit(toolkitSlug);
+  }
+
   const session = await getComposioToolRouterSession();
   const connectionRequest = await session.authorize(toolkitSlug, {
     callbackUrl: callbackUrl || getComposioCallbackUrl("/dashboard/workspace?composio=connected"),
@@ -119,8 +177,14 @@ export async function listComposioConnectedAccounts(): Promise<ComposioWorkspace
       return item.connection?.isActive === true || status === "ACTIVE";
     });
 
+    const byToolkit = new Map<string, (typeof active)[0]>();
+    for (const item of active) {
+      const toolkit = item.slug.toLowerCase();
+      if (!byToolkit.has(toolkit)) byToolkit.set(toolkit, item);
+    }
+
     const connections = await Promise.all(
-      active.map(async (item) => {
+      Array.from(byToolkit.values()).map(async (item) => {
         const toolkit = item.slug.toLowerCase();
         const status = item.connection?.connectedAccount?.status ?? "ACTIVE";
         const label = await resolveToolkitAccountLabel(session, toolkit);

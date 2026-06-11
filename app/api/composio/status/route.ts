@@ -4,6 +4,7 @@ import { getStoredComposioSessionId } from "@/lib/composio/session-store";
 import { listComposioConnectedAccounts } from "@/lib/composio/client";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
@@ -11,17 +12,20 @@ export async function GET() {
     const sessionId = configured ? await getStoredComposioSessionId() : null;
     const accounts = configured ? await listComposioConnectedAccounts() : [];
 
-    return NextResponse.json({
-      configured,
-      sessionId,
-      groups: WORKSPACE_INTEGRATION_GROUPS,
-      connectedAccounts: accounts.map((a) => ({
-        id: a.id,
-        toolkit: a.toolkit,
-        status: a.status,
-        label: a.label,
-      })),
-    });
+    return NextResponse.json(
+      {
+        configured,
+        sessionId,
+        groups: WORKSPACE_INTEGRATION_GROUPS,
+        connectedAccounts: accounts.map((a) => ({
+          id: a.id,
+          toolkit: a.toolkit,
+          status: a.status,
+          label: a.label,
+        })),
+      },
+      { headers: { "Cache-Control": "no-store, max-age=0" } }
+    );
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Status check failed" },
