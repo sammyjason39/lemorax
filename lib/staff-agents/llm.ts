@@ -11,20 +11,7 @@ import { buildAgentPromptExtras } from "@/lib/staff-agents/agent-context";
 import { getSocialContextForAgent } from "@/lib/social-media/store";
 import { getContentPlanContextForAgent } from "@/lib/content-plan/store";
 import { CONTENT_PLAN_KEYWORDS, runSocaContentPlanTools } from "@/lib/content-plan/soca-runner";
-
-function getQwenApiUrl(): string {
-  const base = process.env.QWEN_API_BASE_URL?.replace(/\/$/, "");
-  if (!base) throw new Error("QWEN_API_BASE_URL not configured");
-  return `${base}/chat/completions`;
-}
-
-function getQwenApiKey(): string {
-  const key = process.env.QWEN_API_KEY;
-  if (!key) throw new Error("QWEN_API_KEY not configured");
-  return key;
-}
-
-const MODEL = process.env.QWEN_MODEL || "qwen3.7-plus";
+import { streamChatCompletion } from "@/lib/ai/chat-provider";
 
 const DATA_KEYWORDS =
   /\b(cabang|sales|revenue|omset|kpi|profit|crm|deal|marketing|finance|absensi|karyawan|transaksi|berapa|total|data|laporan)\b/i;
@@ -72,11 +59,10 @@ export async function* streamStaffAgentReply(
       return;
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Composio error";
-      yield { kind: "text", content: `⚠️ Composio: ${msg}\n\n(Mencoba jawab via Qwen…)\n\n` };
+      yield { kind: "text", content: `⚠️ Composio: ${msg}\n\n(Mencoba jawab via model AI…)\n\n` };
     }
   }
 
-  const apiKey = getQwenApiKey();
   const extras = await buildAgentPromptExtras(agent, userMessage);
   const systemPrompt = buildStaffAgentSystemPrompt(agent, team, extras);
   const historyText = formatConversationHistory(history, agent.id, team);
@@ -123,51 +109,18 @@ export async function* streamStaffAgentReply(
     }
   }
 
-  const response = await fetch(getQwenApiUrl(), {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: [
-        { role: "system", content: systemPrompt },
-        {
-          role: "user",
-          content: `Riwayat chat:\n${historyText || "(kosong)"}\n\nPesan ${PRINCIPAL_NAME} sekarang: ${userMessage}${dataContext}`,
-        },
-      ],
-      max_tokens: 2000,
-      temperature: 0.35,
-      stream: true,
-    }),
-  });
-
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Qwen error: ${err}`);
-  }
-
-  const reader = response.body!.getReader();
-  const decoder = new TextDecoder();
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    const chunk = decoder.decode(value);
-    for (const line of chunk.split("\n")) {
-      if (!line.startsWith("data: ")) continue;
-      const data = line.slice(6);
-      if (data === "[DONE]") return;
-      try {
-        const parsed = JSON.parse(data);
-        const content = parsed.choices?.[0]?.delta?.content;
-        if (content) yield { kind: "text", content };
-      } catch {
-        // skip
-      }
-    }
+  for await (const content of streamChatCompletion({
+    messages: [
+      { role: "system", content: systemPrompt },
+      {
+        role: "user",
+        content: `Riwayat chat:\n${historyText || "(kosong)"}\n\nPesan ${PRINCIPAL_NAME} sekarang: ${userMessage}${dataContext}`,
+      },
+    ],
+    maxTokens: 2000,
+    temperature: 0.35,
+  })) {
+    yield { kind: "text", content };
   }
 }
 

@@ -12,8 +12,8 @@ import { buildStaffAgentSystemPrompt, formatConversationHistory } from "@/lib/st
 import { getDisplayName } from "@/lib/staff-agents/names";
 import { PRINCIPAL_NAME } from "@/lib/brand";
 import type { StaffStreamChunk } from "@/lib/staff-agents/stream";
+import { getAiSettings } from "@/lib/ai/settings-store";
 
-const MODEL = process.env.QWEN_MODEL || "qwen3.7-plus";
 const MAX_TOOL_ROUNDS = 8;
 
 type ChatMessage =
@@ -28,16 +28,9 @@ type ToolCall = {
   function: { name: string; arguments: string };
 };
 
-function getQwenApiUrl(): string {
-  const base = process.env.QWEN_API_BASE_URL?.replace(/\/$/, "");
-  if (!base) throw new Error("QWEN_API_BASE_URL not configured");
-  return `${base}/chat/completions`;
-}
-
-function getQwenApiKey(): string {
-  const key = process.env.QWEN_API_KEY;
-  if (!key) throw new Error("QWEN_API_KEY not configured");
-  return key;
+function fallbackChatUrl(base: string): string {
+  const trimmed = base.replace(/\/$/, "");
+  return trimmed.endsWith("/chat/completions") ? trimmed : `${trimmed}/chat/completions`;
 }
 
 async function qwenChat(params: {
@@ -45,14 +38,19 @@ async function qwenChat(params: {
   tools?: unknown[];
   stream?: boolean;
 }) {
-  const res = await fetch(getQwenApiUrl(), {
+  const settings = await getAiSettings();
+  if (!settings.fallbackApiBaseUrl || !settings.fallbackApiKey || !settings.fallbackModel) {
+    throw new Error("Fallback API belum dikonfigurasi di Workspace → Pengaturan AI");
+  }
+
+  const res = await fetch(fallbackChatUrl(settings.fallbackApiBaseUrl), {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${getQwenApiKey()}`,
+      Authorization: `Bearer ${settings.fallbackApiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: MODEL,
+      model: settings.fallbackModel,
       messages: params.messages,
       tools: params.tools,
       tool_choice: params.tools?.length ? "auto" : undefined,
@@ -64,7 +62,7 @@ async function qwenChat(params: {
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`Qwen error: ${err}`);
+    throw new Error(`Fallback API error: ${err}`);
   }
 
   return res;

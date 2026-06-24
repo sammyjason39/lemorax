@@ -1,20 +1,7 @@
 import type { StaffAgent, StaffMessage } from "@/lib/staff-agents/types";
 import { buildTeamRoster, EXECUTIVE_ASSISTANT_ID, getDisplayName, parseMentions, resolveAgentId, PRINCIPAL_NAME } from "@/lib/staff-agents/names";
 import { retrieveVaultRAG } from "@/lib/vault/rag";
-
-function getQwenApiUrl(): string {
-  const base = process.env.QWEN_API_BASE_URL?.replace(/\/$/, "");
-  if (!base) throw new Error("QWEN_API_BASE_URL not configured");
-  return `${base}/chat/completions`;
-}
-
-function getQwenApiKey(): string {
-  const key = process.env.QWEN_API_KEY;
-  if (!key) throw new Error("QWEN_API_KEY not configured");
-  return key;
-}
-
-const MODEL = process.env.QWEN_MODEL || "qwen3.7-plus";
+import { completeChatCompletion } from "@/lib/ai/chat-provider";
 
 export type DelegationPlan = {
   agentId: string;
@@ -58,18 +45,11 @@ export async function planOrchestration(
     titles: [] as string[],
   }));
 
-  const response = await fetch(getQwenApiUrl(), {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${getQwenApiKey()}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: [
-        {
-          role: "system",
-          content: `Kamu adalah Executive Assistant (Chief of Staff) PT Lemorax. Rencanakan delegasi ke spesialis.
+  const { content } = await completeChatCompletion({
+    messages: [
+      {
+        role: "system",
+        content: `Kamu adalah Executive Assistant (Chief of Staff) PT Lemorax. Rencanakan delegasi ke spesialis.
 
 Panggil user **${PRINCIPAL_NAME}** — jangan sebut "owner".
 
@@ -92,23 +72,18 @@ Rules:
 - Jika pertanyaan general/sapa, delegations boleh []
 - enable_cross_talk true di group, false di dm kecuali multi-domain
 - Jika Company Vault relevan, arahkan delegasi ke agent yang paling cocok dan sertakan konteks vault di task`,
-        },
-        {
-          role: "user",
-          content: `Riwayat:\n${historyText || "(kosong)"}\n\n${vault.context ? `${vault.context}\n\n` : ""}Pesan ${PRINCIPAL_NAME}: ${userMessage}${mentionHint}`,
-        },
-      ],
-      max_tokens: 800,
-      temperature: 0.2,
-    }),
+      },
+      {
+        role: "user",
+        content: `Riwayat:\n${historyText || "(kosong)"}\n\n${vault.context ? `${vault.context}\n\n` : ""}Pesan ${PRINCIPAL_NAME}: ${userMessage}${mentionHint}`,
+      },
+    ],
+    maxTokens: 800,
+    temperature: 0.2,
+  }).catch(async (err) => {
+    throw new Error(`Planner error: ${err instanceof Error ? err.message : String(err)}`);
   });
 
-  if (!response.ok) {
-    throw new Error(`Planner error: ${await response.text()}`);
-  }
-
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content ?? "";
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
     return fallbackPlan(userMessage, specialists, userMentions, mode);

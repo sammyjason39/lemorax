@@ -2,20 +2,7 @@ import type { ContentPlanToolName } from "@/lib/content-plan/tools";
 import { executeContentPlanTool } from "@/lib/content-plan/tools";
 import { getContentPlanContextForAgent } from "@/lib/content-plan/store";
 import { getSocialContextForAgent } from "@/lib/social-media/store";
-
-function getQwenApiUrl(): string {
-  const base = process.env.QWEN_API_BASE_URL?.replace(/\/$/, "");
-  if (!base) throw new Error("QWEN_API_BASE_URL not configured");
-  return `${base}/chat/completions`;
-}
-
-function getQwenApiKey(): string {
-  const key = process.env.QWEN_API_KEY;
-  if (!key) throw new Error("QWEN_API_KEY not configured");
-  return key;
-}
-
-const MODEL = process.env.QWEN_MODEL || "qwen3.7-plus";
+import { completeChatCompletion } from "@/lib/ai/chat-provider";
 
 const TOOLS_PROMPT = `Kamu adalah Soca, social media strategist. Eksekusi tool content plan jika diminta.
 
@@ -48,14 +35,9 @@ export async function runSocaContentPlanTools(userMessage: string): Promise<{
     getSocialContextForAgent(8),
   ]);
 
-  const response = await fetch(getQwenApiUrl(), {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${getQwenApiKey()}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: MODEL,
+  let raw = "{}";
+  try {
+    const { content } = await completeChatCompletion({
       messages: [
         { role: "system", content: TOOLS_PROMPT },
         {
@@ -63,18 +45,14 @@ export async function runSocaContentPlanTools(userMessage: string): Promise<{
           content: `${boardContext}\n\n${socialContext}\n\nPesan user: ${userMessage}`,
         },
       ],
-      max_tokens: 1500,
+      maxTokens: 1500,
       temperature: 0.2,
-      response_format: { type: "json_object" },
-    }),
-  });
-
-  if (!response.ok) {
+    });
+    raw = content;
+  } catch {
     return { toolResults: [], replyHint: "" };
   }
 
-  const payload = await response.json();
-  const raw = payload.choices?.[0]?.message?.content ?? "{}";
   let plan: ToolPlan = { tools: [], reply_hint: "" };
   try {
     plan = JSON.parse(raw) as ToolPlan;

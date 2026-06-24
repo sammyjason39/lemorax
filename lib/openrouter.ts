@@ -1,22 +1,10 @@
 import { PRINCIPAL_NAME } from "@/lib/brand";
 import { retrieveVaultRAG } from "@/lib/vault/rag";
+import { completeChatCompletion, streamChatCompletion } from "@/lib/ai/chat-provider";
 
 async function vaultContextBlock(userMessage: string): Promise<string> {
   const rag = await retrieveVaultRAG(userMessage);
   return rag.context ? `\n\n${rag.context}` : "";
-}
-
-function getQwenApiUrl(): string {
-  const base = process.env.QWEN_API_BASE_URL?.replace(/\/$/, "");
-  if (!base) throw new Error("QWEN_API_BASE_URL not configured");
-  return `${base}/chat/completions`;
-}
-const MODEL = process.env.QWEN_MODEL || "qwen3.7-plus";
-
-function getQwenApiKey(): string {
-  const apiKey = process.env.QWEN_API_KEY;
-  if (!apiKey) throw new Error("QWEN_API_KEY not configured");
-  return apiKey;
 }
 
 export const ARIES_SYSTEM_PROMPT = `Kamu adalah ARIES AI Analyst, asisten bisnis pribadi untuk ${PRINCIPAL_NAME} (PT Lemorax).
@@ -78,39 +66,22 @@ export async function generateSQLQuery(userMessage: string): Promise<{
   explanation: string;
   initial_analysis: string;
 }> {
-  const apiKey = getQwenApiKey();
   const vaultBlock = await vaultContextBlock(userMessage);
 
-  const response = await fetch(getQwenApiUrl(), {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: [
-        {
-          role: "system",
-          content: ARIES_SYSTEM_PROMPT + vaultBlock + "\n\n" + ARIES_SQL_PROMPT,
-        },
-        {
-          role: "user",
-          content: `Pertanyaan: ${userMessage}\n\nKembalikan HANYA JSON valid dengan format: {"sql_query": "...", "explanation": "...", "initial_analysis": "..."}`,
-        },
-      ],
-      max_tokens: 1000,
-      temperature: 0.1,
-    }),
+  const { content } = await completeChatCompletion({
+    messages: [
+      {
+        role: "system",
+        content: ARIES_SYSTEM_PROMPT + vaultBlock + "\n\n" + ARIES_SQL_PROMPT,
+      },
+      {
+        role: "user",
+        content: `Pertanyaan: ${userMessage}\n\nKembalikan HANYA JSON valid dengan format: {"sql_query": "...", "explanation": "...", "initial_analysis": "..."}`,
+      },
+    ],
+    maxTokens: 1000,
+    temperature: 0.1,
   });
-
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Qwen API error: ${err}`);
-  }
-
-  const data = await response.json();
-  const content = data.choices[0].message.content;
 
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("Invalid AI response format");
@@ -119,62 +90,22 @@ export async function generateSQLQuery(userMessage: string): Promise<{
 }
 
 export async function* streamDirectAnswer(userMessage: string): AsyncGenerator<string> {
-  const apiKey = getQwenApiKey();
   const vaultBlock = await vaultContextBlock(userMessage);
 
-  const response = await fetch(getQwenApiUrl(), {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: [
-        {
-          role: "system",
-          content:
-            ARIES_SYSTEM_PROMPT +
-            vaultBlock +
-            `\n\nJawab pertanyaan ${PRINCIPAL_NAME} dengan ringkas dan profesional. Prioritaskan Company Vault untuk kebijakan/SOP/konteks internal. Jika pertanyaan membutuhkan angka dari database, sarankan menanyakan data spesifik (cabang, periode, metrik).`,
-        },
-        { role: "user", content: userMessage },
-      ],
-      max_tokens: 1500,
-      temperature: 0.4,
-      stream: true,
-    }),
+  yield* streamChatCompletion({
+    messages: [
+      {
+        role: "system",
+        content:
+          ARIES_SYSTEM_PROMPT +
+          vaultBlock +
+          `\n\nJawab pertanyaan ${PRINCIPAL_NAME} dengan ringkas dan profesional. Prioritaskan Company Vault untuk kebijakan/SOP/konteks internal. Jika pertanyaan membutuhkan angka dari database, sarankan menanyakan data spesifik (cabang, periode, metrik).`,
+      },
+      { role: "user", content: userMessage },
+    ],
+    maxTokens: 1500,
+    temperature: 0.4,
   });
-
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Qwen streaming error: ${err}`);
-  }
-
-  const reader = response.body!.getReader();
-  const decoder = new TextDecoder();
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    const chunk = decoder.decode(value);
-    const lines = chunk.split("\n");
-
-    for (const line of lines) {
-      if (line.startsWith("data: ")) {
-        const data = line.slice(6);
-        if (data === "[DONE]") return;
-        try {
-          const parsed = JSON.parse(data);
-          const content = parsed.choices?.[0]?.delta?.content;
-          if (content) yield content;
-        } catch {
-          // Skip malformed chunks
-        }
-      }
-    }
-  }
 }
 
 export async function* streamFinalAnswer(
@@ -182,60 +113,20 @@ export async function* streamFinalAnswer(
   queryResult: unknown,
   sqlQuery: string
 ): AsyncGenerator<string> {
-  const apiKey = getQwenApiKey();
   const vaultBlock = await vaultContextBlock(userMessage);
 
-  const response = await fetch(getQwenApiUrl(), {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: [
-        {
-          role: "system",
-          content: ARIES_SYSTEM_PROMPT + vaultBlock + "\n\n" + ARIES_FINAL_ANSWER_PROMPT,
-        },
-        {
-          role: "user",
-          content: `Pertanyaan ${PRINCIPAL_NAME}: "${userMessage}"\n\nSQL Query yang dijalankan:\n\`\`\`sql\n${sqlQuery}\n\`\`\`\n\nData hasil query:\n${JSON.stringify(queryResult, null, 2)}\n\nBerikan analisa bisnis yang komprehensif berdasarkan data di atas.`,
-        },
-      ],
-      max_tokens: 2000,
-      temperature: 0.3,
-      stream: true,
-    }),
+  yield* streamChatCompletion({
+    messages: [
+      {
+        role: "system",
+        content: ARIES_SYSTEM_PROMPT + vaultBlock + "\n\n" + ARIES_FINAL_ANSWER_PROMPT,
+      },
+      {
+        role: "user",
+        content: `Pertanyaan ${PRINCIPAL_NAME}: "${userMessage}"\n\nSQL Query yang dijalankan:\n\`\`\`sql\n${sqlQuery}\n\`\`\`\n\nData hasil query:\n${JSON.stringify(queryResult, null, 2)}\n\nBerikan analisa bisnis yang komprehensif berdasarkan data di atas.`,
+      },
+    ],
+    maxTokens: 2000,
+    temperature: 0.3,
   });
-
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Qwen streaming error: ${err}`);
-  }
-
-  const reader = response.body!.getReader();
-  const decoder = new TextDecoder();
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    const chunk = decoder.decode(value);
-    const lines = chunk.split("\n");
-
-    for (const line of lines) {
-      if (line.startsWith("data: ")) {
-        const data = line.slice(6);
-        if (data === "[DONE]") return;
-        try {
-          const parsed = JSON.parse(data);
-          const content = parsed.choices?.[0]?.delta?.content;
-          if (content) yield content;
-        } catch {
-          // Skip malformed chunks
-        }
-      }
-    }
-  }
 }
