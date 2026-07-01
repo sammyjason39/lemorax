@@ -68,10 +68,21 @@ export default function HRPage() {
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           {/* Kehadiran per Cabang */}
           <div className="card-base p-5">
-            <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
+            <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
               Kehadiran per Cabang
             </h3>
-            {isLoading ? <div className="skeleton h-56 rounded-xl" /> : (
+            {data?.effectivePeriode && data?.filterPeriodeEnd && data.effectivePeriode !== data.filterPeriodeEnd ? (
+              <p className="text-[11px] mt-1 mb-3" style={{ color: "var(--text-muted)" }}>
+                Menampilkan data {formatPeriode(data.effectivePeriode)} (belum ada data {formatPeriode(data.filterPeriodeEnd)})
+              </p>
+            ) : (
+              <div className="mb-4" />
+            )}
+            {isLoading ? <div className="skeleton h-56 rounded-xl" /> : kehadiranPerCabang.length === 0 ? (
+              <div className="h-56 flex items-center justify-center text-sm" style={{ color: "var(--text-muted)" }}>
+                Belum ada data absensi untuk periode filter ini.
+              </div>
+            ) : (
               <ResponsiveContainer width="100%" height={Math.max(220, kehadiranPerCabang.length * 36)}>
                 <BarChart data={kehadiranPerCabang} layout="vertical" margin={{ top: 0, right: 56, left: 4, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} horizontal={false} />

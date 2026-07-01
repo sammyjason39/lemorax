@@ -12,6 +12,30 @@ function buildTrendMonths(endPeriode: string, count = 12): string[] {
   return months;
 }
 
+/** Use latest month in range that has absensi when filter end month is empty (e.g. current July, data through June). */
+async function resolveEffectiveEndPeriode(
+  sb: ReturnType<typeof createServerSupabaseClient>,
+  ps: string,
+  pe: string
+): Promise<string> {
+  const { count, error } = await sb
+    .from("absensi")
+    .select("*", { count: "exact", head: true })
+    .eq("periode", pe);
+  if (error) throw new Error(error.message);
+  if ((count ?? 0) > 0) return pe;
+
+  const { data, error: err2 } = await sb
+    .from("absensi")
+    .select("periode")
+    .gte("periode", ps)
+    .lte("periode", pe)
+    .order("periode", { ascending: false })
+    .limit(1);
+  if (err2) throw new Error(err2.message);
+  return data?.[0]?.periode ?? pe;
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const ps = searchParams.get("periode_start") || DEFAULT_PERIODE_START;
@@ -21,11 +45,12 @@ export async function GET(req: NextRequest) {
 
   const sb = createServerSupabaseClient();
   try {
-    const trendMonths = buildTrendMonths(pe).filter((m) => m >= ps && m <= pe);
+    const effectivePe = await resolveEffectiveEndPeriode(sb, ps, pe);
+    const trendMonths = buildTrendMonths(effectivePe).filter((m) => m >= ps && m <= effectivePe);
 
     const [periodData, trendData, employeesRes] = await Promise.all([
       fetchAllRows<any>((from, to) => {
-        let q = sb.from("absensi").select("*").eq("periode", pe).range(from, to);
+        let q = sb.from("absensi").select("*").eq("periode", effectivePe).range(from, to);
         if (cabang.length) q = q.in("cabang", cabang);
         return q;
       }),
@@ -132,6 +157,8 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json({
+      effectivePeriode: effectivePe,
+      filterPeriodeEnd: pe,
       summary: {
         avgKehadiran: Math.round(avgKehadiran * 10) / 10,
         totalSakit,

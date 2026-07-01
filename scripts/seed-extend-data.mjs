@@ -50,6 +50,11 @@ function getCurrentPeriode() {
   return formatYm(NOW.getFullYear(), NOW.getMonth() + 1);
 }
 
+/** Last month with data we should fill — yesterday's calendar month */
+function getEndPeriode() {
+  return formatYm(YESTERDAY.getFullYear(), YESTERDAY.getMonth() + 1);
+}
+
 function addMonths(ym, delta) {
   let { y, m } = parseYm(ym);
   m += delta;
@@ -80,13 +85,30 @@ function daysInMonth(ym) {
 }
 
 function throughDayForMonth(periode) {
-  const { y, m } = parseYm(periode);
-  const current = getCurrentPeriode();
-  if (periode !== current) return null;
-  if (YESTERDAY.getFullYear() === y && YESTERDAY.getMonth() + 1 === m) {
-    return YESTERDAY.getDate();
-  }
-  return daysInMonth(periode);
+  const endMonth = getEndPeriode();
+  if (periode > endMonth) return null;
+  if (periode < endMonth) return daysInMonth(periode);
+  return YESTERDAY.getDate();
+}
+
+async function getLatestSalesDay(periode) {
+  const { data, error } = await sb
+    .from("sales_report")
+    .select("tanggal")
+    .eq("periode", periode)
+    .order("tanggal", { ascending: false })
+    .limit(1);
+  if (error) throw new Error(`sales_report latest: ${error.message}`);
+  if (!data?.length) return 0;
+  return parseInt(String(data[0].tanggal).slice(8, 10), 10);
+}
+
+async function isMonthIncomplete(periode) {
+  const expected = throughDayForMonth(periode);
+  if (!expected) return false;
+  const latest = await getLatestSalesDay(periode);
+  if (!latest) return true;
+  return latest < expected - 1;
 }
 
 async function getMaxPeriode(table = "sales_report") {
@@ -347,30 +369,49 @@ function buildMarketing(sourceMarketing, periode, monthFraction) {
 
 async function resolvePlan() {
   const currentMonth = getCurrentPeriode();
+  const endMonth = getEndPeriode();
   const maxPeriode = await getMaxPeriode("sales_report");
 
   if (!maxPeriode) {
     throw new Error("No sales_report data in Supabase. Run scripts/seed_supabase.py first.");
   }
 
-  let targetMonths;
-  if (maxPeriode >= currentMonth) {
-    targetMonths = [currentMonth];
-  } else {
-    targetMonths = monthsFromTo(addMonths(maxPeriode, 1), currentMonth);
+  const targetMonths = [];
+
+  if (maxPeriode <= endMonth && (await isMonthIncomplete(maxPeriode))) {
+    targetMonths.push(maxPeriode);
+  }
+
+  const firstNew = targetMonths.length ? addMonths(maxPeriode, 1) : maxPeriode;
+  if (firstNew <= endMonth) {
+    for (const m of monthsFromTo(firstNew, endMonth)) {
+      if (!targetMonths.includes(m)) targetMonths.push(m);
+    }
+  }
+
+  if (!targetMonths.length) {
+    if (maxPeriode >= endMonth && (await isMonthIncomplete(endMonth))) {
+      targetMonths.push(endMonth);
+    } else if (maxPeriode < endMonth) {
+      targetMonths.push(...monthsFromTo(addMonths(maxPeriode, 1), endMonth));
+    } else {
+      targetMonths.push(endMonth);
+    }
   }
 
   const sourcePeriode = addMonths(targetMonths[0], -1);
   const throughDate = YESTERDAY.toISOString().slice(0, 10);
 
-  return { currentMonth, maxPeriode, targetMonths, sourcePeriode, throughDate };
+  return { currentMonth, endMonth, maxPeriode, targetMonths, sourcePeriode, throughDate };
 }
 
 async function main() {
-  const { currentMonth, maxPeriode, targetMonths, sourcePeriode, throughDate } = await resolvePlan();
+  const { currentMonth, endMonth, maxPeriode, targetMonths, sourcePeriode, throughDate } =
+    await resolvePlan();
 
   console.log("📊 Lemorax Data Extender");
   console.log(`   DB max periode: ${maxPeriode}`);
+  console.log(`   Calendar month: ${currentMonth} | Fill through: ${endMonth}`);
   console.log(`   Target months: ${targetMonths.join(", ")}`);
   console.log(`   Source template: ${sourcePeriode}`);
   console.log(`   Through: ${throughDate} (yesterday)`);
