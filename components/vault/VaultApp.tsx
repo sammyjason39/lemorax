@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import { BookOpen, GitBranch, LayoutGrid, Plus, Save, Search, Trash2, Eye, Columns2, Pencil } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
@@ -8,6 +9,7 @@ import { VaultMarkdown } from "@/components/vault/VaultMarkdown";
 import { VaultGraphView } from "@/components/vault/VaultGraphView";
 import { brand } from "@/lib/brand";
 import type { VaultNote, VaultNoteType } from "@/lib/vault/types";
+import { matchVaultNoteByLinkTitle } from "@/lib/vault/wikilink-markdown";
 
 const fetcher = (url: string) => fetch(url, { cache: "no-store" }).then((r) => r.json());
 
@@ -29,6 +31,7 @@ const VIEW_TABS: { id: ViewMode; label: string; icon: typeof Eye }[] = [
 ];
 
 export function VaultApp() {
+  const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
@@ -61,13 +64,18 @@ export function VaultApp() {
 
   const openByTitle = useCallback(
     (linkTitle: string) => {
-      const hit = notes.find(
-        (n) => n.title.toLowerCase() === linkTitle.toLowerCase() || n.slug === linkTitle.toLowerCase().replace(/\s+/g, "-")
-      );
+      const hit = matchVaultNoteByLinkTitle(notes, linkTitle);
       if (hit) loadNote(hit);
     },
     [notes, loadNote]
   );
+
+  useEffect(() => {
+    const open = searchParams.get("open")?.trim();
+    if (!open || notes.length === 0) return;
+    const hit = matchVaultNoteByLinkTitle(notes, open);
+    if (hit) loadNote(hit);
+  }, [searchParams, notes, loadNote]);
 
   const handleNew = () => {
     setActiveId(null);

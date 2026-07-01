@@ -6,6 +6,8 @@ import { Bot, Send, User, Code, ChevronRight, Database, Sparkles, Brain } from "
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { streamAgentChat } from "@/lib/agents/chat-stream";
+import { preprocessWikilinks } from "@/lib/vault/wikilink-markdown";
+import { renderVaultMarkdownLink } from "@/components/markdown/VaultWikilink";
 
 interface Message {
   id: string;
@@ -98,10 +100,20 @@ function ThinkingBubble() {
 
 /* ─── Markdown renderer for assistant messages ─── */
 function MarkdownContent({ content }: { content: string }) {
+  const md = preprocessWikilinks(content);
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={{
+        a: ({ href, children }) => {
+          const vault = renderVaultMarkdownLink(href, children);
+          if (vault) return vault;
+          return (
+            <a href={href} target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "#1652F0" }}>
+              {children}
+            </a>
+          );
+        },
         h1: ({ children }) => (
           <h1
             className="text-lg font-bold mt-4 mb-2 pb-1"
@@ -225,7 +237,7 @@ function MarkdownContent({ content }: { content: string }) {
         ),
       }}
     >
-      {content}
+      {md}
     </ReactMarkdown>
   );
 }

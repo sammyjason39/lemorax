@@ -3,20 +3,12 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { brand } from "@/lib/brand";
+import { preprocessWikilinks } from "@/lib/vault/wikilink-markdown";
 
 type Props = {
   content: string;
   onWikilinkClick?: (title: string) => void;
 };
-
-/** Convert Obsidian [[wikilinks]] to markdown links for preview */
-function preprocessWikilinks(content: string): string {
-  return content.replace(/\[\[([^\]|#]+)(?:#[^\]]*)?\]\]/g, (_, raw: string) => {
-    const title = raw.trim();
-    const encoded = encodeURIComponent(title);
-    return `[${title}](vault://${encoded})`;
-  });
-}
 
 const NOTE_TYPE_COLORS: Record<string, string> = {
   mom: "#7C3AED",

@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { Send, Users } from "lucide-react";
 import type { StaffAgent, StaffConversation, StaffMessage } from "@/lib/staff-agents/types";
 import { AgentAvatar, GroupAvatar } from "@/components/staff-agents/AgentAvatar";
-import { getChatLabel, getDisplayName, getMentionTag, filterMentionSuggestions } from "@/lib/staff-agents/names";
+import { AgentMarkdown } from "@/components/markdown/AgentMarkdown";
+import { getChatLabel, getMentionTag, filterMentionSuggestions } from "@/lib/staff-agents/names";
 import { brand } from "@/lib/brand";
 import { sanitizeAgentContent } from "@/lib/staff-agents/stream";
 
@@ -186,11 +185,7 @@ export function ChatThread({
                   {isUser ? (
                     <p className="whitespace-pre-wrap">{msg.content}</p>
                   ) : (
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {sanitizeAgentContent(msg.content)}
-                      </ReactMarkdown>
-                    </div>
+                    <AgentMarkdown content={sanitizeAgentContent(msg.content)} />
                   )}
                 </div>
                 <span className="text-[10px] px-1" style={{ color: "var(--text-muted)" }}>
@@ -239,11 +234,7 @@ export function ChatThread({
                     ))}
                   </div>
                 ) : (
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {streamingContent || "..."}
-                    </ReactMarkdown>
-                  </div>
+                  <AgentMarkdown content={streamingContent || "..."} />
                 )}
               </div>
             </div>

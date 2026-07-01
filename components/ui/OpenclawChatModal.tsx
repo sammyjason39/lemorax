@@ -7,6 +7,8 @@ import { brand } from "@/lib/brand";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { streamAgentChat } from "@/lib/agents/chat-stream";
+import { preprocessWikilinks } from "@/lib/vault/wikilink-markdown";
+import { renderVaultMarkdownLink } from "@/components/markdown/VaultWikilink";
 
 interface Message {
   id: string;
@@ -63,10 +65,20 @@ function ThinkingBubble() {
 
 /* ─── Markdown renderer ─── */
 function MarkdownContent({ content }: { content: string }) {
+  const md = preprocessWikilinks(content);
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={{
+        a: ({ href, children }) => {
+          const vault = renderVaultMarkdownLink(href, children);
+          if (vault) return vault;
+          return (
+            <a href={href} target="_blank" rel="noopener noreferrer" className="underline" style={{ color: brand.blue }}>
+              {children}
+            </a>
+          );
+        },
         h1: ({ children }) => <h1 className="text-sm font-bold mt-2 mb-1" style={{ color: "var(--text-primary)" }}>{children}</h1>,
         h2: ({ children }) => <h2 className="text-xs font-bold mt-2 mb-1" style={{ color: "#1652F0" }}>{children}</h2>,
         h3: ({ children }) => <h3 className="text-xs font-semibold mt-2 mb-1" style={{ color: "#1652F0" }}>{children}</h3>,
@@ -80,7 +92,7 @@ function MarkdownContent({ content }: { content: string }) {
         blockquote: ({ children }) => <blockquote className="pl-2 py-0.5 my-1.5 text-[11px]" style={{ borderLeft: "2px solid #1652F0", color: brand.blueMid }}>{children}</blockquote>,
       }}
     >
-      {content}
+      {md}
     </ReactMarkdown>
   );
 }
