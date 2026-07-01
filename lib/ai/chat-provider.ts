@@ -1,5 +1,5 @@
 import { getAiSettings } from "@/lib/ai/settings-store";
-import type { ChatMessage } from "@/lib/ai/types";
+import type { AiProviderMode, AiSettings, ChatMessage } from "@/lib/ai/types";
 import { completeOllamaChat, streamOllamaChat } from "@/lib/ai/ollama";
 
 export type ChatProviderMeta = {
@@ -12,6 +12,36 @@ export type ChatProviderMeta = {
 function fallbackChatUrl(base: string): string {
   const trimmed = base.replace(/\/$/, "");
   return trimmed.endsWith("/chat/completions") ? trimmed : `${trimmed}/chat/completions`;
+}
+
+function assertFallbackConfigured(settings: AiSettings): {
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+} {
+  if (!settings.fallbackApiBaseUrl || !settings.fallbackApiKey || !settings.fallbackModel) {
+    throw new Error("API cloud belum lengkap di Settings (endpoint, key, model).");
+  }
+  return {
+    baseUrl: settings.fallbackApiBaseUrl,
+    apiKey: settings.fallbackApiKey,
+    model: settings.fallbackModel,
+  };
+}
+
+function assertOllamaConfigured(settings: AiSettings): { baseUrl: string; model: string } {
+  if (!settings.ollamaModel) {
+    throw new Error("Pilih model Ollama di Settings.");
+  }
+  return { baseUrl: settings.ollamaBaseUrl, model: settings.ollamaModel };
+}
+
+function shouldTryOllama(settings: AiSettings): boolean {
+  return settings.providerMode !== "cloud_only" && Boolean(settings.ollamaModel);
+}
+
+function allowsFallback(settings: AiSettings): boolean {
+  return settings.providerMode !== "local_only";
 }
 
 async function* readOpenAiStream(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
@@ -116,15 +146,13 @@ export async function* streamChatCompletion(params: {
 }): AsyncGenerator<string> {
   const settings = await getAiSettings();
 
-  if (settings.ollamaModel) {
+  if (shouldTryOllama(settings)) {
+    const ollama = assertOllamaConfigured(settings);
     try {
-      params.onMeta?.({
-        provider: "ollama",
-        model: settings.ollamaModel,
-      });
+      params.onMeta?.({ provider: "ollama", model: ollama.model });
       yield* streamOllamaChat({
-        baseUrl: settings.ollamaBaseUrl,
-        model: settings.ollamaModel,
+        baseUrl: ollama.baseUrl,
+        model: ollama.model,
         messages: params.messages,
         maxTokens: params.maxTokens,
         temperature: params.temperature,
@@ -132,19 +160,20 @@ export async function* streamChatCompletion(params: {
       return;
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
-      if (!settings.fallbackApiBaseUrl || !settings.fallbackApiKey || !settings.fallbackModel) {
-        throw new Error(`Ollama gagal dan fallback belum dikonfigurasi: ${reason}`);
+      if (!allowsFallback(settings)) {
+        throw new Error(`Ollama gagal (mode Local only): ${reason}`);
       }
+      const cloud = assertFallbackConfigured(settings);
       params.onMeta?.({
         provider: "fallback",
-        model: settings.fallbackModel,
+        model: cloud.model,
         usedFallback: true,
         fallbackReason: reason,
       });
       yield* streamFallbackChat({
-        baseUrl: settings.fallbackApiBaseUrl,
-        apiKey: settings.fallbackApiKey,
-        model: settings.fallbackModel,
+        baseUrl: cloud.baseUrl,
+        apiKey: cloud.apiKey,
+        model: cloud.model,
         messages: params.messages,
         maxTokens: params.maxTokens,
         temperature: params.temperature,
@@ -153,18 +182,17 @@ export async function* streamChatCompletion(params: {
     }
   }
 
-  if (!settings.fallbackApiBaseUrl || !settings.fallbackApiKey || !settings.fallbackModel) {
-    throw new Error("Model Ollama belum dipilih dan fallback API belum lengkap di Settings.");
+  if (settings.providerMode === "local_only") {
+    assertOllamaConfigured(settings);
+    throw new Error("Mode Local only membutuhkan model Ollama yang dipilih.");
   }
 
-  params.onMeta?.({
-    provider: "fallback",
-    model: settings.fallbackModel,
-  });
+  const cloud = assertFallbackConfigured(settings);
+  params.onMeta?.({ provider: "fallback", model: cloud.model });
   yield* streamFallbackChat({
-    baseUrl: settings.fallbackApiBaseUrl,
-    apiKey: settings.fallbackApiKey,
-    model: settings.fallbackModel,
+    baseUrl: cloud.baseUrl,
+    apiKey: cloud.apiKey,
+    model: cloud.model,
     messages: params.messages,
     maxTokens: params.maxTokens,
     temperature: params.temperature,
@@ -178,25 +206,27 @@ export async function completeChatCompletion(params: {
 }): Promise<{ content: string; meta: ChatProviderMeta }> {
   const settings = await getAiSettings();
 
-  if (settings.ollamaModel) {
+  if (shouldTryOllama(settings)) {
+    const ollama = assertOllamaConfigured(settings);
     try {
       const content = await completeOllamaChat({
-        baseUrl: settings.ollamaBaseUrl,
-        model: settings.ollamaModel,
+        baseUrl: ollama.baseUrl,
+        model: ollama.model,
         messages: params.messages,
         maxTokens: params.maxTokens,
         temperature: params.temperature,
       });
-      return { content, meta: { provider: "ollama", model: settings.ollamaModel } };
+      return { content, meta: { provider: "ollama", model: ollama.model } };
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
-      if (!settings.fallbackApiBaseUrl || !settings.fallbackApiKey || !settings.fallbackModel) {
-        throw new Error(`Ollama gagal dan fallback belum dikonfigurasi: ${reason}`);
+      if (!allowsFallback(settings)) {
+        throw new Error(`Ollama gagal (mode Local only): ${reason}`);
       }
+      const cloud = assertFallbackConfigured(settings);
       const content = await completeFallbackChat({
-        baseUrl: settings.fallbackApiBaseUrl,
-        apiKey: settings.fallbackApiKey,
-        model: settings.fallbackModel,
+        baseUrl: cloud.baseUrl,
+        apiKey: cloud.apiKey,
+        model: cloud.model,
         messages: params.messages,
         maxTokens: params.maxTokens,
         temperature: params.temperature,
@@ -205,7 +235,7 @@ export async function completeChatCompletion(params: {
         content,
         meta: {
           provider: "fallback",
-          model: settings.fallbackModel,
+          model: cloud.model,
           usedFallback: true,
           fallbackReason: reason,
         },
@@ -213,17 +243,36 @@ export async function completeChatCompletion(params: {
     }
   }
 
-  if (!settings.fallbackApiBaseUrl || !settings.fallbackApiKey || !settings.fallbackModel) {
-    throw new Error("Model Ollama belum dipilih dan fallback API belum lengkap di Settings.");
+  if (settings.providerMode === "local_only") {
+    assertOllamaConfigured(settings);
+    throw new Error("Mode Local only membutuhkan model Ollama yang dipilih.");
   }
 
+  const cloud = assertFallbackConfigured(settings);
   const content = await completeFallbackChat({
-    baseUrl: settings.fallbackApiBaseUrl,
-    apiKey: settings.fallbackApiKey,
-    model: settings.fallbackModel,
+    baseUrl: cloud.baseUrl,
+    apiKey: cloud.apiKey,
+    model: cloud.model,
     messages: params.messages,
     maxTokens: params.maxTokens,
     temperature: params.temperature,
   });
-  return { content, meta: { provider: "fallback", model: settings.fallbackModel } };
+  return { content, meta: { provider: "fallback", model: cloud.model } };
+}
+
+/** Cloud credentials for tool-calling paths (e.g. Composio). */
+export async function getCloudChatCredentials(): Promise<{
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  providerMode: AiProviderMode;
+}> {
+  const settings = await getAiSettings();
+  if (settings.providerMode === "local_only") {
+    throw new Error(
+      "Mode Local only aktif — Composio/tool cloud membutuhkan mode Local + Cloud atau Cloud only."
+    );
+  }
+  const cloud = assertFallbackConfigured(settings);
+  return { ...cloud, providerMode: settings.providerMode };
 }

@@ -4,8 +4,21 @@ import { useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
 import { brand } from "@/lib/brand";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { CheckCircle2, Cloud, Cpu, Loader2, RefreshCw, Save, Server } from "lucide-react";
-import type { AiSettingsPublic } from "@/lib/ai/types";
+import { CheckCircle2, Cloud, Cpu, Loader2, RefreshCw, Save, Server, SlidersHorizontal } from "lucide-react";
+import type { AiProviderMode, AiSettingsPublic } from "@/lib/ai/types";
+import { AI_PROVIDER_MODES } from "@/lib/ai/types";
+
+const MODE_LABEL_KEYS: Record<AiProviderMode, "settings.ai.mode_local_only" | "settings.ai.mode_local_cloud" | "settings.ai.mode_cloud_only"> = {
+  local_only: "settings.ai.mode_local_only",
+  local_cloud: "settings.ai.mode_local_cloud",
+  cloud_only: "settings.ai.mode_cloud_only",
+};
+
+const MODE_HINT_KEYS: Record<AiProviderMode, "settings.ai.mode_local_only_hint" | "settings.ai.mode_local_cloud_hint" | "settings.ai.mode_cloud_only_hint"> = {
+  local_only: "settings.ai.mode_local_only_hint",
+  local_cloud: "settings.ai.mode_local_cloud_hint",
+  cloud_only: "settings.ai.mode_cloud_only_hint",
+};
 
 const fetcher = (url: string) => fetch(url, { cache: "no-store" }).then((r) => r.json());
 
@@ -20,6 +33,7 @@ export function AiSettingsPanel() {
   const { t } = useLanguage();
   const { data, mutate, isLoading } = useSWR<AiSettingsPublic>("/api/settings/ai", fetcher);
 
+  const [providerMode, setProviderMode] = useState<AiProviderMode>("local_cloud");
   const [ollamaBaseUrl, setOllamaBaseUrl] = useState("");
   const [ollamaModel, setOllamaModel] = useState("");
   const [fallbackApiBaseUrl, setFallbackApiBaseUrl] = useState("");
@@ -34,6 +48,7 @@ export function AiSettingsPanel() {
 
   useEffect(() => {
     if (!data) return;
+    setProviderMode(data.providerMode || "local_cloud");
     setOllamaBaseUrl(data.ollamaBaseUrl || "http://127.0.0.1:11434");
     setOllamaModel(data.ollamaModel || "");
     setFallbackApiBaseUrl(data.fallbackApiBaseUrl || "");
@@ -73,6 +88,7 @@ export function AiSettingsPanel() {
     setSaveError(null);
     try {
       const body: Record<string, string | null> = {
+        providerMode,
         ollamaBaseUrl,
         ollamaModel: ollamaModel || null,
         fallbackApiBaseUrl: fallbackApiBaseUrl || null,
@@ -109,19 +125,51 @@ export function AiSettingsPanel() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
-          {t("settings.ai.title")}
-        </h2>
-        <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-          {t("settings.ai.subtitle")}
+      <section
+        className="rounded-2xl p-5 border space-y-3"
+        style={{ background: "var(--bg-primary)", borderColor: "var(--border)" }}
+      >
+        <div className="flex items-center gap-2">
+          <SlidersHorizontal size={18} style={{ color: brand.blue }} />
+          <h3 className="font-medium" style={{ color: "var(--text-primary)" }}>
+            {t("settings.ai.mode_title")}
+          </h3>
+        </div>
+
+        <div
+          className="inline-flex flex-wrap rounded-xl p-1 text-xs font-medium border gap-1"
+          style={{ background: "var(--bg-secondary)", borderColor: "var(--border)" }}
+        >
+          {AI_PROVIDER_MODES.map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setProviderMode(mode)}
+              className="px-3 py-2 rounded-lg transition-colors whitespace-nowrap"
+              style={{
+                background: providerMode === mode ? "var(--bg-primary)" : "transparent",
+                color: providerMode === mode ? brand.blue : "var(--text-muted)",
+                boxShadow: providerMode === mode ? "0 1px 3px rgba(0,0,0,0.06)" : undefined,
+              }}
+            >
+              {t(MODE_LABEL_KEYS[mode])}
+            </button>
+          ))}
+        </div>
+
+        <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+          {t(MODE_HINT_KEYS[providerMode])}
         </p>
-      </div>
+      </section>
 
       {/* Ollama */}
       <section
         className="rounded-2xl p-5 border space-y-4"
-        style={{ background: "var(--bg-primary)", borderColor: "var(--border)" }}
+        style={{
+          background: "var(--bg-primary)",
+          borderColor: "var(--border)",
+          opacity: providerMode === "cloud_only" ? 0.55 : 1,
+        }}
       >
         <div className="flex items-center gap-2">
           <Cpu size={18} style={{ color: brand.blue }} />
@@ -130,7 +178,9 @@ export function AiSettingsPanel() {
           </h3>
         </div>
         <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-          {t("settings.ai.ollama_hint")}
+          {providerMode === "cloud_only"
+            ? t("settings.ai.ollama_disabled_cloud_only")
+            : t("settings.ai.ollama_hint")}
         </p>
 
         <label className="block space-y-1.5">
@@ -142,6 +192,7 @@ export function AiSettingsPanel() {
             value={ollamaBaseUrl}
             onChange={(e) => setOllamaBaseUrl(e.target.value)}
             placeholder="http://127.0.0.1:11434"
+            disabled={providerMode === "cloud_only"}
             className="w-full rounded-lg border px-3 py-2 text-sm"
             style={{
               background: "var(--bg-secondary)",
@@ -159,6 +210,7 @@ export function AiSettingsPanel() {
             <select
               value={ollamaModel}
               onChange={(e) => setOllamaModel(e.target.value)}
+              disabled={providerMode === "cloud_only"}
               className="w-full rounded-lg border px-3 py-2 text-sm"
               style={{
                 background: "var(--bg-secondary)",
@@ -181,7 +233,7 @@ export function AiSettingsPanel() {
           <button
             type="button"
             onClick={() => void loadModels()}
-            disabled={loadingModels}
+            disabled={loadingModels || providerMode === "cloud_only"}
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border"
             style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}
           >
@@ -210,7 +262,11 @@ export function AiSettingsPanel() {
       {/* Fallback */}
       <section
         className="rounded-2xl p-5 border space-y-4"
-        style={{ background: "var(--bg-primary)", borderColor: "var(--border)" }}
+        style={{
+          background: "var(--bg-primary)",
+          borderColor: "var(--border)",
+          opacity: providerMode === "local_only" ? 0.55 : 1,
+        }}
       >
         <div className="flex items-center gap-2">
           <Cloud size={18} style={{ color: brand.blue }} />
@@ -219,7 +275,9 @@ export function AiSettingsPanel() {
           </h3>
         </div>
         <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-          {t("settings.ai.fallback_hint")}
+          {providerMode === "local_only"
+            ? t("settings.ai.fallback_disabled_local_only")
+            : t("settings.ai.fallback_hint")}
         </p>
 
         <label className="block space-y-1.5">
@@ -231,6 +289,7 @@ export function AiSettingsPanel() {
             value={fallbackApiBaseUrl}
             onChange={(e) => setFallbackApiBaseUrl(e.target.value)}
             placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1"
+            disabled={providerMode === "local_only"}
             className="w-full rounded-lg border px-3 py-2 text-sm"
             style={{
               background: "var(--bg-secondary)",
@@ -255,6 +314,7 @@ export function AiSettingsPanel() {
             onChange={(e) => setFallbackApiKey(e.target.value)}
             placeholder={data?.hasFallbackApiKey ? "••••••••" : "sk-..."}
             autoComplete="off"
+            disabled={providerMode === "local_only"}
             className="w-full rounded-lg border px-3 py-2 text-sm"
             style={{
               background: "var(--bg-secondary)",
@@ -273,6 +333,7 @@ export function AiSettingsPanel() {
             value={fallbackModel}
             onChange={(e) => setFallbackModel(e.target.value)}
             placeholder="qwen3.7-plus"
+            disabled={providerMode === "local_only"}
             className="w-full rounded-lg border px-3 py-2 text-sm"
             style={{
               background: "var(--bg-secondary)",

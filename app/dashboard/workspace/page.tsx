@@ -5,7 +5,6 @@ import useSWR, { mutate as globalMutate } from "swr";
 import { useSearchParams, useRouter } from "next/navigation";
 import { TopBar } from "@/components/layout/TopBar";
 import { WorkspaceConnections } from "@/components/workspace/WorkspaceConnections";
-import { AiSettingsPanel } from "@/components/settings/AiSettingsPanel";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { brand } from "@/lib/brand";
 import {
@@ -19,14 +18,13 @@ import {
   Loader2,
   MapPin,
   RefreshCw,
-  Settings2,
 } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-type WorkspaceTab = "connections" | "calendar" | "settings";
+type WorkspaceTab = "connections" | "calendar";
 
 type CalendarEvent = {
   id: string;
@@ -122,8 +120,6 @@ export default function WorkspacePage() {
       setTab("calendar");
       router.replace("/dashboard/workspace");
       if (connected) void mutateStatus();
-    } else if (searchParams.get("tab") === "settings") {
-      setTab("settings");
     }
   }, [searchParams, router, mutateStatus]);
 
@@ -176,7 +172,6 @@ export default function WorkspacePage() {
   const tabs: { id: WorkspaceTab; label: string; icon: typeof Layers }[] = [
     { id: "connections", label: t("workspace.tab_connections"), icon: Layers },
     { id: "calendar", label: t("workspace.tab_calendar"), icon: CalendarDays },
-    { id: "settings", label: t("workspace.tab_settings"), icon: Settings2 },
   ];
 
   return (
@@ -209,8 +204,6 @@ export default function WorkspacePage() {
 
       <div className={`p-6 space-y-6 ${tab === "connections" ? "max-w-7xl" : "max-w-6xl"}`}>
         {tab === "connections" && <WorkspaceConnections />}
-
-        {tab === "settings" && <AiSettingsPanel />}
 
         {tab === "calendar" && (
           <>

@@ -1,10 +1,12 @@
 import { createServerSupabaseClient } from "@/lib/supabase";
-import type { AiSettings, AiSettingsPublic, AiSettingsUpdate } from "@/lib/ai/types";
+import type { AiProviderMode, AiSettings, AiSettingsPublic, AiSettingsUpdate } from "@/lib/ai/types";
+import { isAiProviderMode } from "@/lib/ai/types";
 
 const ROW_ID = "default";
 
 type SettingsRow = {
   id: string;
+  provider_mode?: string | null;
   ollama_base_url: string;
   ollama_model: string | null;
   fallback_api_base_url: string | null;
@@ -13,8 +15,15 @@ type SettingsRow = {
   updated_at: string | null;
 };
 
+function defaultProviderMode(): AiProviderMode {
+  const env = process.env.AI_PROVIDER_MODE?.trim();
+  if (env && isAiProviderMode(env)) return env;
+  return "local_cloud";
+}
+
 function fromEnvDefaults(): AiSettings {
   return {
+    providerMode: defaultProviderMode(),
     ollamaBaseUrl: process.env.OLLAMA_BASE_URL?.trim() || "http://127.0.0.1:11434",
     ollamaModel: process.env.OLLAMA_MODEL?.trim() || null,
     fallbackApiBaseUrl: process.env.QWEN_API_BASE_URL?.trim() || null,
@@ -26,7 +35,12 @@ function fromEnvDefaults(): AiSettings {
 
 function fromRow(row: SettingsRow): AiSettings {
   const env = fromEnvDefaults();
+  const modeRaw = row.provider_mode?.trim();
+  const providerMode =
+    modeRaw && isAiProviderMode(modeRaw) ? modeRaw : env.providerMode;
+
   return {
+    providerMode,
     ollamaBaseUrl: row.ollama_base_url?.trim() || env.ollamaBaseUrl,
     ollamaModel: row.ollama_model?.trim() || env.ollamaModel,
     fallbackApiBaseUrl: row.fallback_api_base_url?.trim() || env.fallbackApiBaseUrl,
@@ -44,6 +58,7 @@ function maskApiKey(key: string | null): string | null {
 
 export function toPublicSettings(settings: AiSettings): AiSettingsPublic {
   return {
+    providerMode: settings.providerMode,
     ollamaBaseUrl: settings.ollamaBaseUrl,
     ollamaModel: settings.ollamaModel,
     fallbackApiBaseUrl: settings.fallbackApiBaseUrl,
@@ -74,6 +89,8 @@ export async function updateAiSettings(patch: AiSettingsUpdate): Promise<AiSetti
 
   const row = {
     id: ROW_ID,
+    provider_mode:
+      patch.providerMode === undefined ? current.providerMode : patch.providerMode,
     ollama_base_url: patch.ollamaBaseUrl?.trim() || current.ollamaBaseUrl,
     ollama_model:
       patch.ollamaModel === undefined ? current.ollamaModel : patch.ollamaModel?.trim() || null,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAiSettings, toPublicSettings, updateAiSettings } from "@/lib/ai/settings-store";
 import type { AiSettingsUpdate } from "@/lib/ai/types";
+import { isAiProviderMode } from "@/lib/ai/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,6 +25,9 @@ export async function PUT(req: Request) {
     const body = (await req.json()) as AiSettingsUpdate;
     const patch: AiSettingsUpdate = {};
 
+    if (typeof body.providerMode === "string" && isAiProviderMode(body.providerMode)) {
+      patch.providerMode = body.providerMode;
+    }
     if (typeof body.ollamaBaseUrl === "string") patch.ollamaBaseUrl = body.ollamaBaseUrl;
     if (body.ollamaModel !== undefined) patch.ollamaModel = body.ollamaModel;
     if (body.fallbackApiBaseUrl !== undefined) patch.fallbackApiBaseUrl = body.fallbackApiBaseUrl;

@@ -18,6 +18,7 @@ import {
   UsersRound,
   LayoutGrid,
   BookOpen,
+  Settings2,
 } from "lucide-react";
 import { useFilters } from "@/contexts/FilterContext";
 import { useState } from "react";
@@ -65,6 +66,11 @@ const NAV_ITEMS: { href: string; labelKey: TranslationKey; icon: any; badge?: st
     labelKey: "menu.vault",
     icon: BookOpen,
     badge: "Vault",
+  },
+  {
+    href: "/dashboard/settings",
+    labelKey: "menu.settings",
+    icon: Settings2,
   },
 ];
 

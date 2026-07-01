@@ -12,7 +12,7 @@ import { buildStaffAgentSystemPrompt, formatConversationHistory } from "@/lib/st
 import { getDisplayName } from "@/lib/staff-agents/names";
 import { PRINCIPAL_NAME } from "@/lib/brand";
 import type { StaffStreamChunk } from "@/lib/staff-agents/stream";
-import { getAiSettings } from "@/lib/ai/settings-store";
+import { getCloudChatCredentials } from "@/lib/ai/chat-provider";
 
 const MAX_TOOL_ROUNDS = 8;
 
@@ -38,19 +38,16 @@ async function qwenChat(params: {
   tools?: unknown[];
   stream?: boolean;
 }) {
-  const settings = await getAiSettings();
-  if (!settings.fallbackApiBaseUrl || !settings.fallbackApiKey || !settings.fallbackModel) {
-    throw new Error("Fallback API belum dikonfigurasi di Workspace → Pengaturan AI");
-  }
+  const settings = await getCloudChatCredentials();
 
-  const res = await fetch(fallbackChatUrl(settings.fallbackApiBaseUrl), {
+  const res = await fetch(fallbackChatUrl(settings.baseUrl), {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${settings.fallbackApiKey}`,
+      Authorization: `Bearer ${settings.apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: settings.fallbackModel,
+      model: settings.model,
       messages: params.messages,
       tools: params.tools,
       tool_choice: params.tools?.length ? "auto" : undefined,

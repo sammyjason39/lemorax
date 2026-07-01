@@ -1,4 +1,17 @@
+export type AiProviderMode = "local_only" | "local_cloud" | "cloud_only";
+
+export const AI_PROVIDER_MODES: AiProviderMode[] = [
+  "local_only",
+  "local_cloud",
+  "cloud_only",
+];
+
+export function isAiProviderMode(value: string): value is AiProviderMode {
+  return AI_PROVIDER_MODES.includes(value as AiProviderMode);
+}
+
 export type AiSettings = {
+  providerMode: AiProviderMode;
   ollamaBaseUrl: string;
   ollamaModel: string | null;
   fallbackApiBaseUrl: string | null;
@@ -8,6 +21,7 @@ export type AiSettings = {
 };
 
 export type AiSettingsPublic = {
+  providerMode: AiProviderMode;
   ollamaBaseUrl: string;
   ollamaModel: string | null;
   fallbackApiBaseUrl: string | null;
@@ -18,6 +32,7 @@ export type AiSettingsPublic = {
 };
 
 export type AiSettingsUpdate = {
+  providerMode?: AiProviderMode;
   ollamaBaseUrl?: string;
   ollamaModel?: string | null;
   fallbackApiBaseUrl?: string | null;
