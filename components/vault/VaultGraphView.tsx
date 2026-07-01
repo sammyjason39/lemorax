@@ -23,12 +23,14 @@ const GRAPH_BG = "#14141a";
 const GRAPH_EDGE = "rgba(255,255,255,0.12)";
 const GRAPH_EDGE_HI = "rgba(147,197,253,0.55)";
 const GRAPH_LABEL = "rgba(255,255,255,0.72)";
-const GRAPH_LABEL_HI = "#ffffff";
+const ZOOM_MIN = 0.35;
+const ZOOM_MAX = 4.2; // ~40% beyond previous max (3)
 
 const { width: CANVAS_W, height: CANVAS_H } = FORCE_LAYOUT_CANVAS;
 
 export function VaultGraphView({ onSelectNote }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
   const [viewport, setViewport] = useState({ width: CANVAS_W, height: CANVAS_H });
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [transform, setTransform] = useState({ x: 0, y: 0, k: 1 });
@@ -87,11 +89,53 @@ export function VaultGraphView({ onSelectNote }: Props) {
     return s;
   }, [hoverId, data?.edges]);
 
-  const onWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.92 : 1.08;
-    setTransform((t) => ({ ...t, k: Math.min(3, Math.max(0.35, t.k * delta)) }));
+  const clientToViewBox = useCallback((clientX: number, clientY: number) => {
+    const svg = svgRef.current;
+    if (!svg) return null;
+    const pt = svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return null;
+    return pt.matrixTransform(ctm.inverse());
   }, []);
+
+  const screenDeltaToViewBox = useCallback((clientX: number, clientY: number, dx: number, dy: number) => {
+    const svg = svgRef.current;
+    if (!svg) return { x: dx, y: dy };
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return { x: dx, y: dy };
+    const inv = ctm.inverse();
+    const pt = svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    const a = pt.matrixTransform(inv);
+    pt.x = clientX + dx;
+    pt.y = clientY + dy;
+    const b = pt.matrixTransform(inv);
+    return { x: b.x - a.x, y: b.y - a.y };
+  }, []);
+
+  const onWheel = useCallback(
+    (e: React.WheelEvent) => {
+      e.preventDefault();
+      const viewPt = clientToViewBox(e.clientX, e.clientY);
+      if (!viewPt) return;
+
+      const factor = e.deltaY > 0 ? 0.92 : 1.08;
+      setTransform((t) => {
+        const newK = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, t.k * factor));
+        const localX = (viewPt.x - t.x) / t.k;
+        const localY = (viewPt.y - t.y) / t.k;
+        return {
+          x: viewPt.x - localX * newK,
+          y: viewPt.y - localY * newK,
+          k: newK,
+        };
+      });
+    },
+    [clientToViewBox]
+  );
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     if (e.button !== 0) return;
@@ -101,15 +145,19 @@ export function VaultGraphView({ onSelectNote }: Props) {
     containerRef.current?.setPointerCapture(e.pointerId);
   }, []);
 
-  const onPointerMove = useCallback((e: React.PointerEvent) => {
-    const d = dragRef.current;
-    if (!d?.panning) return;
-    const dx = e.clientX - d.lastX;
-    const dy = e.clientY - d.lastY;
-    d.lastX = e.clientX;
-    d.lastY = e.clientY;
-    setTransform((t) => ({ ...t, x: t.x + dx, y: t.y + dy }));
-  }, []);
+  const onPointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      const d = dragRef.current;
+      if (!d?.panning) return;
+      const dx = e.clientX - d.lastX;
+      const dy = e.clientY - d.lastY;
+      d.lastX = e.clientX;
+      d.lastY = e.clientY;
+      const viewDelta = screenDeltaToViewBox(e.clientX, e.clientY, dx, dy);
+      setTransform((t) => ({ ...t, x: t.x + viewDelta.x, y: t.y + viewDelta.y }));
+    },
+    [screenDeltaToViewBox]
+  );
 
   const onPointerUp = useCallback(() => {
     if (dragRef.current) dragRef.current.panning = false;
@@ -158,6 +206,7 @@ export function VaultGraphView({ onSelectNote }: Props) {
         onPointerLeave={onPointerUp}
       >
         <svg
+          ref={svgRef}
           width={viewport.width}
           height={viewport.height}
           viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`}

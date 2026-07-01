@@ -9,10 +9,10 @@ import { formatPct, formatDateID } from "@/lib/formatters";
 import { Gift, Calendar } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  AreaChart, Area, Cell
+  AreaChart, Area, Cell, LabelList
 } from "recharts";
 import { formatPeriode } from "@/lib/formatters";
-import { CHART_PRIMARY, CHART_SECONDARY, CHART_AXIS, CHART_GRID, CHART_MUTED, ATTENDANCE_COLORS, getChartColor } from "@/lib/brand";
+import { CHART_PRIMARY, CHART_SECONDARY, CHART_AXIS, CHART_GRID, ATTENDANCE_COLORS, getKehadiranBarColor } from "@/lib/brand";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -24,6 +24,10 @@ export default function HRPage() {
   });
 
   const { data, isLoading } = useSWR(`/api/hr?${params}`, fetcher, { refreshInterval: 60000 });
+
+  const kehadiranPerCabang = [...(data?.kehadiranPerCabang || [])].sort(
+    (a: { pct: number }, b: { pct: number }) => b.pct - a.pct
+  );
 
   const metrics = [
     { title: "Total Karyawan Aktif", value: data ? data.summary?.totalKaryawan.toString() : "—" },
@@ -68,15 +72,17 @@ export default function HRPage() {
               Kehadiran per Cabang
             </h3>
             {isLoading ? <div className="skeleton h-56 rounded-xl" /> : (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={[...(data?.kehadiranPerCabang || [])].sort((a: any, b: any) => b.pct - a.pct)} layout="vertical" margin={{ top: 0, right: 60, left: 10, bottom: 0 }}>
-                  <XAxis type="number" domain={[0,100]} tickFormatter={(v) => `${v}%`} tick={{ fill: CHART_AXIS, fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis type="category" dataKey="cabang" tick={{ fill: CHART_MUTED, fontSize: 11 }} axisLine={false} tickLine={false} width={100} />
-                  <Tooltip formatter={(v: any) => [`${Number(v).toFixed(1)}%`, "Kehadiran"]} contentStyle={{ background: "var(--bg-tertiary)", border: "1px solid var(--border)" }} />
-                  <Bar dataKey="pct" radius={[0,4,4,0]} maxBarSize={20}>
-                    {[...(data?.kehadiranPerCabang || [])].sort((a: any, b: any) => b.pct - a.pct).map((_: any, i: number, arr: any[]) => (
-                      <Cell key={i} fill={getChartColor(i, arr.length)} fillOpacity={0.9} />
+              <ResponsiveContainer width="100%" height={Math.max(220, kehadiranPerCabang.length * 36)}>
+                <BarChart data={kehadiranPerCabang} layout="vertical" margin={{ top: 0, right: 56, left: 4, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} horizontal={false} />
+                  <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fill: CHART_AXIS, fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="cabang" tick={{ fill: "var(--text-secondary)", fontSize: 11 }} axisLine={false} tickLine={false} width={108} />
+                  <Tooltip formatter={(v: number) => [`${Number(v).toFixed(1)}%`, "Kehadiran"]} contentStyle={{ background: "var(--bg-tertiary)", border: "1px solid var(--border)" }} />
+                  <Bar dataKey="pct" radius={[0, 4, 4, 0]} maxBarSize={22}>
+                    {kehadiranPerCabang.map((row: { pct: number }, i: number) => (
+                      <Cell key={i} fill={getKehadiranBarColor(row.pct)} fillOpacity={0.95} />
                     ))}
+                    <LabelList dataKey="pct" position="right" formatter={(v: number) => `${v}%`} style={{ fill: CHART_AXIS, fontSize: 11 }} />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>

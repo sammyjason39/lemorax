@@ -127,6 +127,17 @@ export const ATTENDANCE_COLORS: Record<string, string> = {
   alfa: CHART_CATEGORICAL_PALETTE[1],
 };
 
+/** Attendance bar — semantic by % (no grey/white bars) */
+export function getKehadiranBarColor(pct: number): string {
+  if (pct >= 95) return brand.blue;
+  if (pct >= 90) return "#3B82F6";
+  if (pct >= 85) return "#60A5FA";
+  if (pct >= 80) return brand.blueMid;
+  if (pct >= 75) return "#F59E0B";
+  if (pct >= 70) return "#F97316";
+  return brand.danger;
+}
+
 /** KPI heatmap cell — solid colors, higher achievement = more saturated blue */
 export function getHeatmapCellStyle(achievementPct: number): {
   background: string;
