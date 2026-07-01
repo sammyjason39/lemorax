@@ -1,16 +1,24 @@
 import { planAgentRun } from "@/lib/agents/planner";
 import { queryBusinessData } from "@/lib/agents/query-business-data";
-import type { AgentChatEvent, AgentChatInput } from "@/lib/agents/types";
+import type { AgentChatEvent, AgentChatHistoryMessage, AgentChatInput, AgentLastQuery } from "@/lib/agents/types";
 import { generateSQLQuery, streamDirectAnswer, streamFinalAnswer } from "@/lib/openrouter";
 
 function runId(): string {
   return `run_${Date.now().toString(36)}`;
 }
 
-async function* runQueryBusinessDataTool(message: string): AsyncGenerator<AgentChatEvent> {
+type AgentRunContext = {
+  history?: AgentChatHistoryMessage[];
+  lastQuery?: AgentLastQuery;
+};
+
+async function* runQueryBusinessDataTool(
+  message: string,
+  ctx: AgentRunContext
+): AsyncGenerator<AgentChatEvent> {
   yield { type: "tool_call", toolName: "query_business_data", input: { message } };
 
-  const { sql_query, explanation, initial_analysis } = await generateSQLQuery(message);
+  const { sql_query, explanation, initial_analysis } = await generateSQLQuery(message, ctx.history);
   const result = await queryBusinessData({
     sql_query,
     explanation,
@@ -43,17 +51,56 @@ async function* runQueryBusinessDataTool(message: string): AsyncGenerator<AgentC
   for await (const chunk of streamFinalAnswer(
     message,
     resultData,
-    result.ok ? result.sql_query : sql_query
+    result.ok ? result.sql_query : sql_query,
+    ctx.history
   )) {
     yield { type: "chunk", content: chunk };
   }
 }
 
-async function* runDirectAnswerTool(message: string): AsyncGenerator<AgentChatEvent> {
+async function* runDirectAnswerTool(
+  message: string,
+  ctx: AgentRunContext
+): AsyncGenerator<AgentChatEvent> {
   yield { type: "tool_call", toolName: "direct_answer", input: { message } };
   yield { type: "tool_result", toolName: "direct_answer", output: { mode: "general" } };
 
-  for await (const chunk of streamDirectAnswer(message)) {
+  for await (const chunk of streamDirectAnswer(message, ctx.history)) {
+    yield { type: "chunk", content: chunk };
+  }
+}
+
+async function* runContinueDataAnswerTool(
+  message: string,
+  ctx: AgentRunContext
+): AsyncGenerator<AgentChatEvent> {
+  if (!ctx.lastQuery) {
+    yield* runDirectAnswerTool(message, ctx);
+    return;
+  }
+
+  yield { type: "tool_call", toolName: "continue_data_answer", input: { message } };
+  yield {
+    type: "tool_result",
+    toolName: "continue_data_answer",
+    output: { reusingQuery: true, sql: ctx.lastQuery.sqlQuery },
+  };
+
+  yield {
+    type: "meta",
+    source: "aries",
+    sql_query: ctx.lastQuery.sqlQuery,
+    queryResult: ctx.lastQuery.queryResult,
+    note: "Melanjutkan analisis dari query sebelumnya",
+  };
+
+  for await (const chunk of streamFinalAnswer(
+    message,
+    ctx.lastQuery.queryResult,
+    ctx.lastQuery.sqlQuery,
+    ctx.history,
+    { continue: true, originalQuestion: ctx.lastQuery.userQuestion }
+  )) {
     yield { type: "chunk", content: chunk };
   }
 }
@@ -70,10 +117,11 @@ export async function* runAriesAgent(input: AgentChatInput): AsyncGenerator<Agen
 
   const id = runId();
   const sessionId = input.sessionId ?? "default";
+  const ctx: AgentRunContext = { history: input.history, lastQuery: input.lastQuery };
 
   yield { type: "message_start", runId: id, sessionId };
 
-  const plan = planAgentRun(message);
+  const plan = planAgentRun(message, { history: input.history, lastQuery: input.lastQuery });
   yield {
     type: "meta",
     source: "aries",
@@ -84,9 +132,11 @@ export async function* runAriesAgent(input: AgentChatInput): AsyncGenerator<Agen
   try {
     for (const tool of plan.tools) {
       if (tool === "query_business_data") {
-        yield* runQueryBusinessDataTool(message);
+        yield* runQueryBusinessDataTool(message, ctx);
       } else if (tool === "direct_answer") {
-        yield* runDirectAnswerTool(message);
+        yield* runDirectAnswerTool(message, ctx);
+      } else if (tool === "continue_data_answer") {
+        yield* runContinueDataAnswerTool(message, ctx);
       }
     }
 

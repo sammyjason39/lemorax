@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { runAriesAgent } from "@/lib/agents/aries-agent";
 import { agentEventsToResponse } from "@/lib/agents/sse";
+import type { AgentChatHistoryMessage, AgentLastQuery } from "@/lib/agents/types";
 
 export const runtime = "nodejs";
 
@@ -8,6 +9,8 @@ type ChatRequestBody = {
   message?: string;
   sessionId?: string;
   agentId?: string;
+  history?: AgentChatHistoryMessage[];
+  lastQuery?: AgentLastQuery;
 };
 
 export async function POST(req: NextRequest) {
@@ -23,6 +26,8 @@ export async function POST(req: NextRequest) {
         message,
         sessionId: body.sessionId ?? "default",
         agentId: body.agentId,
+        history: body.history,
+        lastQuery: body.lastQuery,
       })
     );
   } catch (err) {

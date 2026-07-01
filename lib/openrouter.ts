@@ -1,6 +1,8 @@
 import { PRINCIPAL_NAME } from "@/lib/brand";
 import { retrieveVaultRAG } from "@/lib/vault/rag";
 import { completeChatCompletion, streamChatCompletion } from "@/lib/ai/chat-provider";
+import { buildMessagesWithHistory } from "@/lib/agents/chat-history";
+import type { AgentChatHistoryMessage } from "@/lib/agents/types";
 
 async function vaultContextBlock(userMessage: string): Promise<string> {
   const rag = await retrieveVaultRAG(userMessage);
@@ -61,7 +63,35 @@ export const LEMORAX_SQL_PROMPT = ARIES_SQL_PROMPT;
 /** @deprecated use ARIES_FINAL_ANSWER_PROMPT */
 export const LEMORAX_FINAL_ANSWER_PROMPT = ARIES_FINAL_ANSWER_PROMPT;
 
-export async function generateSQLQuery(userMessage: string): Promise<{
+const FINAL_ANSWER_MAX_TOKENS = 4096;
+
+/** Keep prompt payload bounded so local models don't exhaust num_ctx. */
+function formatQueryResultForPrompt(queryResult: unknown, maxChars = 14_000): string {
+  if (queryResult == null) return "null";
+  const json = JSON.stringify(queryResult, null, 2);
+  if (json.length <= maxChars) return json;
+
+  if (Array.isArray(queryResult)) {
+    const preview = queryResult.slice(0, 40);
+    return JSON.stringify(
+      {
+        _truncated: true,
+        row_count: queryResult.length,
+        preview_rows: preview,
+        note: `Dataset ${queryResult.length} baris — analisis dari sample 40 baris pertama.`,
+      },
+      null,
+      2
+    );
+  }
+
+  return `${json.slice(0, maxChars)}\n... [data dipotong untuk muat context model]`;
+}
+
+export async function generateSQLQuery(
+  userMessage: string,
+  history?: AgentChatHistoryMessage[]
+): Promise<{
   sql_query: string;
   explanation: string;
   initial_analysis: string;
@@ -69,16 +99,15 @@ export async function generateSQLQuery(userMessage: string): Promise<{
   const vaultBlock = await vaultContextBlock(userMessage);
 
   const { content } = await completeChatCompletion({
-    messages: [
-      {
-        role: "system",
-        content: ARIES_SYSTEM_PROMPT + vaultBlock + "\n\n" + ARIES_SQL_PROMPT,
-      },
-      {
-        role: "user",
-        content: `Pertanyaan: ${userMessage}\n\nKembalikan HANYA JSON valid dengan format: {"sql_query": "...", "explanation": "...", "initial_analysis": "..."}`,
-      },
-    ],
+    messages: buildMessagesWithHistory(
+      ARIES_SYSTEM_PROMPT +
+        vaultBlock +
+        "\n\n" +
+        ARIES_SQL_PROMPT +
+        "\n\nGunakan riwayat percakapan jika pertanyaan user merujuk ke topik sebelumnya (mis. 'yang tadi', 'cabang itu', 'bulan ini' setelah dibahas).",
+      history,
+      `Pertanyaan: ${userMessage}\n\nKembalikan HANYA JSON valid dengan format: {"sql_query": "...", "explanation": "...", "initial_analysis": "..."}`
+    ),
     maxTokens: 1000,
     temperature: 0.1,
   });
@@ -89,20 +118,20 @@ export async function generateSQLQuery(userMessage: string): Promise<{
   return JSON.parse(jsonMatch[0]);
 }
 
-export async function* streamDirectAnswer(userMessage: string): AsyncGenerator<string> {
+export async function* streamDirectAnswer(
+  userMessage: string,
+  history?: AgentChatHistoryMessage[]
+): AsyncGenerator<string> {
   const vaultBlock = await vaultContextBlock(userMessage);
 
   yield* streamChatCompletion({
-    messages: [
-      {
-        role: "system",
-        content:
-          ARIES_SYSTEM_PROMPT +
-          vaultBlock +
-          `\n\nJawab pertanyaan ${PRINCIPAL_NAME} dengan ringkas dan profesional. Prioritaskan Company Vault untuk kebijakan/SOP/konteks internal. Jika pertanyaan membutuhkan angka dari database, sarankan menanyakan data spesifik (cabang, periode, metrik).`,
-      },
-      { role: "user", content: userMessage },
-    ],
+    messages: buildMessagesWithHistory(
+      ARIES_SYSTEM_PROMPT +
+        vaultBlock +
+        `\n\nJawab pertanyaan ${PRINCIPAL_NAME} dengan ringkas dan profesional. Prioritaskan Company Vault untuk kebijakan/SOP/konteks internal. Gunakan riwayat percakapan untuk pertanyaan lanjutan — jangan bertanya ulang hal yang sudah dibahas. Jika pertanyaan membutuhkan angka baru dari database, sarankan menanyakan data spesifik (cabang, periode, metrik).`,
+      history,
+      userMessage
+    ),
     maxTokens: 1500,
     temperature: 0.4,
   });
@@ -111,22 +140,24 @@ export async function* streamDirectAnswer(userMessage: string): AsyncGenerator<s
 export async function* streamFinalAnswer(
   userMessage: string,
   queryResult: unknown,
-  sqlQuery: string
+  sqlQuery: string,
+  history?: AgentChatHistoryMessage[],
+  options?: { continue?: boolean; originalQuestion?: string }
 ): AsyncGenerator<string> {
   const vaultBlock = await vaultContextBlock(userMessage);
 
+  const dataBlock = formatQueryResultForPrompt(queryResult);
+  const userContent = options?.continue
+    ? `Pertanyaan lanjutan ${PRINCIPAL_NAME}: "${userMessage}"\n\nPertanyaan data asli: "${options.originalQuestion ?? userMessage}"\n\nSQL Query:\n\`\`\`sql\n${sqlQuery}\n\`\`\`\n\nData hasil query:\n${dataBlock}\n\nLanjutkan analisis dari jawaban sebelumnya yang terpotong. Jangan ulangi ranking/poin yang sudah dijelaskan — langsung sambung dari titik terakhir.`
+    : `Pertanyaan ${PRINCIPAL_NAME}: "${userMessage}"\n\nSQL Query yang dijalankan:\n\`\`\`sql\n${sqlQuery}\n\`\`\`\n\nData hasil query:\n${dataBlock}\n\nBerikan analisa bisnis yang komprehensif berdasarkan data di atas. Selesaikan semua poin/ranking — jangan berhenti di tengah daftar.`;
+
   yield* streamChatCompletion({
-    messages: [
-      {
-        role: "system",
-        content: ARIES_SYSTEM_PROMPT + vaultBlock + "\n\n" + ARIES_FINAL_ANSWER_PROMPT,
-      },
-      {
-        role: "user",
-        content: `Pertanyaan ${PRINCIPAL_NAME}: "${userMessage}"\n\nSQL Query yang dijalankan:\n\`\`\`sql\n${sqlQuery}\n\`\`\`\n\nData hasil query:\n${JSON.stringify(queryResult, null, 2)}\n\nBerikan analisa bisnis yang komprehensif berdasarkan data di atas.`,
-      },
-    ],
-    maxTokens: 2000,
+    messages: buildMessagesWithHistory(
+      ARIES_SYSTEM_PROMPT + vaultBlock + "\n\n" + ARIES_FINAL_ANSWER_PROMPT,
+      history,
+      userContent
+    ),
+    maxTokens: FINAL_ANSWER_MAX_TOKENS,
     temperature: 0.3,
   });
 }

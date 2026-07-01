@@ -7,6 +7,7 @@ import { brand } from "@/lib/brand";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { streamAgentChat } from "@/lib/agents/chat-stream";
+import { buildAgentChatPayload } from "@/lib/agents/chat-payload";
 import { preprocessWikilinks } from "@/lib/vault/wikilink-markdown";
 import { renderVaultMarkdownLink } from "@/components/markdown/VaultWikilink";
 
@@ -132,8 +133,9 @@ export function OpenclawChatModal() {
     ]);
 
     try {
+      const payload = buildAgentChatPayload(messages, text);
       await streamAgentChat({
-        message: text,
+        ...payload,
         onEvent: (parsed) => {
           if (parsed.type === "meta" && parsed.sql_query) {
             setMessages((prev) =>

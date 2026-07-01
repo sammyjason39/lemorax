@@ -5,15 +5,23 @@ import { agentEventsToResponse } from "@/lib/agents/sse";
 /** Legacy route — delegates to the same ARIES agent as /api/agents/chat */
 export async function POST(req: NextRequest) {
   try {
-    const { message, sessionId } = await req.json();
-    if (!message?.trim()) {
+    const body = (await req.json()) as {
+      message?: string;
+      sessionId?: string;
+      history?: import("@/lib/agents/types").AgentChatHistoryMessage[];
+      lastQuery?: import("@/lib/agents/types").AgentLastQuery;
+    };
+    const message = body.message?.trim();
+    if (!message) {
       return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
     return agentEventsToResponse(
       runAriesAgent({
-        message: message.trim(),
-        sessionId: sessionId ?? "default",
+        message,
+        sessionId: body.sessionId ?? "default",
+        history: body.history,
+        lastQuery: body.lastQuery,
       })
     );
   } catch (e: unknown) {

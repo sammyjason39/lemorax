@@ -1,8 +1,24 @@
+export type AgentChatHistoryMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+/** Last successful SQL query in session — used for "lanjutkan" without re-query. */
+export type AgentLastQuery = {
+  userQuestion: string;
+  sqlQuery: string;
+  queryResult: unknown;
+};
+
 /** Custom ARIES agent — chat input */
 export type AgentChatInput = {
   message: string;
   sessionId?: string;
   agentId?: string;
+  /** Prior turns in this chat (exclude the current user message). */
+  history?: AgentChatHistoryMessage[];
+  /** Most recent query result in session, if any. */
+  lastQuery?: AgentLastQuery;
 };
 
 /** SSE events streamed to the browser */

@@ -6,6 +6,7 @@ import { Bot, Send, User, Code, ChevronRight, Database, Sparkles, Brain } from "
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { streamAgentChat } from "@/lib/agents/chat-stream";
+import { buildAgentChatPayload } from "@/lib/agents/chat-payload";
 import { preprocessWikilinks } from "@/lib/vault/wikilink-markdown";
 import { renderVaultMarkdownLink } from "@/components/markdown/VaultWikilink";
 
@@ -273,8 +274,9 @@ export default function AIAnalystPage() {
     ]);
 
     try {
+      const payload = buildAgentChatPayload(messages, text);
       await streamAgentChat({
-        message: text,
+        ...payload,
         onEvent: (parsed) => {
           if (parsed.type === "meta" && parsed.sql_query) {
             setActiveQuery({ sql: parsed.sql_query, result: parsed.queryResult, explanation: parsed.explanation });

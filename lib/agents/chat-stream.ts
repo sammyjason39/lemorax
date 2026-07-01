@@ -1,5 +1,7 @@
 "use client";
 
+import type { AgentChatHistoryMessage, AgentLastQuery } from "@/lib/agents/types";
+
 const DEFAULT_SESSION_ID = "default";
 
 export function getAgentSessionId(): string {
@@ -30,6 +32,8 @@ export type AgentChatStreamEvent =
 export async function streamAgentChat(params: {
   message: string;
   sessionId?: string;
+  history?: AgentChatHistoryMessage[];
+  lastQuery?: AgentLastQuery;
   onEvent: (event: AgentChatStreamEvent) => void;
 }): Promise<void> {
   const res = await fetch("/api/agents/chat", {
@@ -38,6 +42,8 @@ export async function streamAgentChat(params: {
     body: JSON.stringify({
       message: params.message,
       sessionId: params.sessionId ?? getAgentSessionId(),
+      history: params.history,
+      lastQuery: params.lastQuery,
     }),
   });
 

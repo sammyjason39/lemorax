@@ -9,6 +9,7 @@
 import fs from "fs";
 import path from "path";
 import { createClient } from "@supabase/supabase-js";
+import { buildRealisticWeekValues } from "./lib/realistic-absensi.mjs";
 
 function loadEnvLocal() {
   const envPath = path.join(process.cwd(), ".env.local");
@@ -230,12 +231,11 @@ function buildAbsensi(sourceAbsensi, periode, weeks) {
   }
 
   const out = [];
-  let idx = 0;
   for (const [empId, weeksData] of Object.entries(byEmployee)) {
     const template = weeksData.slice(0, weeks);
     for (let w = 0; w < weeks; w++) {
       const src = template[w] ?? template[0];
-      const r = seededRand(idx++ + periode.charCodeAt(5));
+      const v = buildRealisticWeekValues(empId, src.cabang, periode, w + 1);
       out.push({
         periode,
         minggu_ke: `Week ${w + 1}`,
@@ -243,13 +243,7 @@ function buildAbsensi(sourceAbsensi, periode, weeks) {
         nama: src.nama,
         cabang: src.cabang,
         jabatan: src.jabatan,
-        hadir: randInt(r, Math.max(3, src.hadir - 1), Math.min(5, src.hadir + 1)),
-        sakit: randInt(r, 0, src.sakit > 0 ? src.sakit : 1),
-        izin: randInt(r, 0, src.izin > 0 ? src.izin : 1),
-        alfa: randInt(r, 0, src.alfa),
-        terlambat: randInt(r, 0, src.terlambat > 0 ? src.terlambat + 1 : 1),
-        wfh: randInt(r, 0, src.wfh > 0 ? src.wfh + 1 : 1),
-        total_hari_kerja: 5,
+        ...v,
       });
     }
   }
