@@ -18,6 +18,15 @@ const NOTE_TYPE_COLORS: Record<string, string> = {
   note: "#64748B",
 };
 
+function getVaultTitleFromHref(href: string | undefined): string | null {
+  if (!href) return null;
+  if (href.startsWith("vault://")) return decodeURIComponent(href.replace("vault://", ""));
+  if (href.startsWith("/dashboard/vault?")) {
+    return new URLSearchParams(href.split("?")[1] ?? "").get("open");
+  }
+  return null;
+}
+
 export function VaultMarkdown({ content, onWikilinkClick }: Props) {
   const md = preprocessWikilinks(content);
 
@@ -27,12 +36,12 @@ export function VaultMarkdown({ content, onWikilinkClick }: Props) {
         remarkPlugins={[remarkGfm]}
         components={{
           a: ({ href, children }) => {
-            if (href?.startsWith("vault://")) {
-              const title = decodeURIComponent(href.replace("vault://", ""));
+            const vaultTitle = getVaultTitleFromHref(href);
+            if (vaultTitle) {
               return (
                 <button
                   type="button"
-                  onClick={() => onWikilinkClick?.(title)}
+                  onClick={() => onWikilinkClick?.(vaultTitle)}
                   className="inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-sm font-medium no-underline hover:opacity-80"
                   style={{ background: `${brand.blue}18`, color: brand.blue }}
                 >
@@ -40,6 +49,7 @@ export function VaultMarkdown({ content, onWikilinkClick }: Props) {
                 </button>
               );
             }
+            if (!href) return <span>{children}</span>;
             return (
               <a href={href} target="_blank" rel="noopener noreferrer" className="text-[#1652F0] underline">
                 {children}

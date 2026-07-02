@@ -27,7 +27,19 @@ export function VaultWikilink({ title, children, className }: Props) {
 }
 
 export function renderVaultMarkdownLink(href: string | undefined, children: React.ReactNode) {
-  if (!href?.startsWith("vault://")) return null;
-  const title = decodeURIComponent(href.replace("vault://", ""));
-  return <VaultWikilink title={title}>{children}</VaultWikilink>;
+  if (!href) return null;
+
+  if (href.startsWith("vault://")) {
+    const title = decodeURIComponent(href.replace("vault://", ""));
+    return <VaultWikilink title={title}>{children}</VaultWikilink>;
+  }
+
+  if (href.startsWith("/dashboard/vault?")) {
+    const params = new URLSearchParams(href.split("?")[1] ?? "");
+    const title = params.get("open");
+    if (!title) return null;
+    return <VaultWikilink title={title}>{children}</VaultWikilink>;
+  }
+
+  return null;
 }

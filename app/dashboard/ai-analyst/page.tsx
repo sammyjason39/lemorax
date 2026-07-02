@@ -109,6 +109,7 @@ function MarkdownContent({ content }: { content: string }) {
         a: ({ href, children }) => {
           const vault = renderVaultMarkdownLink(href, children);
           if (vault) return vault;
+          if (!href) return <span>{children}</span>;
           return (
             <a href={href} target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "#1652F0" }}>
               {children}

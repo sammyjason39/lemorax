@@ -23,6 +23,7 @@ const GRAPH_BG = "#14141a";
 const GRAPH_EDGE = "rgba(255,255,255,0.12)";
 const GRAPH_EDGE_HI = "rgba(147,197,253,0.55)";
 const GRAPH_LABEL = "rgba(255,255,255,0.72)";
+const GRAPH_LABEL_HI = "rgba(255,255,255,0.94)";
 const ZOOM_MIN = 0.35;
 const ZOOM_MAX = 4.2; // ~40% beyond previous max (3)
 

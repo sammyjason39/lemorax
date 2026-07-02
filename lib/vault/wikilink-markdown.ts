@@ -5,11 +5,21 @@ export function vaultOpenUrl(title: string): string {
   return `/dashboard/vault?open=${encodeURIComponent(title.trim())}`;
 }
 
-/** Convert Obsidian [[wikilinks]] to markdown links (vault:// protocol) */
+function parseWikilink(raw: string): { title: string; label: string } {
+  const [targetPart, aliasPart] = raw.split("|");
+  const title = targetPart.split("#")[0].trim();
+  return {
+    title,
+    label: (aliasPart ?? title).trim(),
+  };
+}
+
+/** Convert Obsidian [[wikilinks]] to safe internal markdown links */
 export function preprocessWikilinks(content: string): string {
-  return content.replace(/\[\[([^\]|#]+)(?:#[^\]]*)?\]\]/g, (_, raw: string) => {
-    const title = raw.trim();
-    return `[${title}](vault://${encodeURIComponent(title)})`;
+  return content.replace(/\[\[([^\]]+)\]\]/g, (_, raw: string) => {
+    const { title, label } = parseWikilink(raw);
+    if (!title) return label || raw;
+    return `[${label}](${vaultOpenUrl(title)})`;
   });
 }
 

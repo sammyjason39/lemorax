@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { brand } from "@/lib/brand";
@@ -23,6 +22,7 @@ export function AgentMarkdown({ content, className }: Props) {
           a: ({ href, children }) => {
             const vault = renderVaultMarkdownLink(href, children);
             if (vault) return vault;
+            if (!href) return <span>{children}</span>;
             return (
               <a
                 href={href}
