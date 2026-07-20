@@ -23,6 +23,7 @@ function loadEnvLocal() {
 loadEnvLocal();
 
 const DRY_RUN = process.argv.includes("--dry-run");
+const FULL_MONTH = process.argv.includes("--full-month");
 const NOW = new Date();
 const YESTERDAY = new Date(NOW);
 YESTERDAY.setDate(YESTERDAY.getDate() - 1);
@@ -89,6 +90,9 @@ function throughDayForMonth(periode) {
   const endMonth = getEndPeriode();
   if (periode > endMonth) return null;
   if (periode < endMonth) return daysInMonth(periode);
+  // Full month seeding: useful when you want demo data through month-end
+  // regardless of current calendar day.
+  if (FULL_MONTH) return daysInMonth(periode);
   return YESTERDAY.getDate();
 }
 

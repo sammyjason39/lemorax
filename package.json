@@ -11,6 +11,7 @@
     "import:staff-supabase": "node scripts/import-staff-to-supabase.mjs",
     "seed:extend": "node scripts/seed-extend-data.mjs",
     "seed:extend:dry": "node scripts/seed-extend-data.mjs --dry-run",
+    "seed:extend:full": "node scripts/seed-extend-data.mjs --full-month",
     "seed:absensi:repair": "node scripts/repair-absensi-rates.mjs",
     "seed:absensi:dedupe": "node scripts/dedupe-absensi.mjs",
     "setup:vault-supabase": "node scripts/setup-vault-supabase.mjs",
