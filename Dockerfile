@@ -12,6 +12,7 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DOCKER_BUILD=1
 ENV NODE_OPTIONS="--max-old-space-size=3072"
+# Public env must be baked at build time for static optimization
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 ARG NEXT_PUBLIC_APP_URL
@@ -34,4 +35,5 @@ USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+# Server-side env is read at container runtime via .env file or docker-compose
 CMD ["node", "server.js"]
