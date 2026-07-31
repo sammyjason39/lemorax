@@ -1,0 +1,87 @@
+name: Deploy to Coolify VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -e
+            DEPLOY_DIR=/tmp/lemorax-deploy
+            mkdir -p $DEPLOY_DIR
+            cd $DEPLOY_DIR
+
+            if [ -d .git ]; then
+              git fetch origin main
+              git reset --hard origin/main
+            else
+              git clone --depth 1 -b main https://github.com/${{ github.repository }}.git .
+            fi
+
+            cat > .env.local <<'EOF'
+            NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+            SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+            NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
+            QWEN_API_BASE_URL=${{ secrets.QWEN_API_BASE_URL }}
+            QWEN_API_KEY=${{ secrets.QWEN_API_KEY }}
+            QWEN_MODEL=${{ secrets.QWEN_MODEL }}
+            COMPOSIO_API_KEY=${{ secrets.COMPOSIO_API_KEY }}
+            COMPOSIO_USER_ID=${{ secrets.COMPOSIO_USER_ID }}
+            OPENCLAW_GATEWAY_URL=${{ secrets.OPENCLAW_GATEWAY_URL }}
+            OPENCLAW_GATEWAY_TOKEN=${{ secrets.OPENCLAW_GATEWAY_TOKEN }}
+            OPENCLAW_INTEGRATION_MODE=${{ secrets.OPENCLAW_INTEGRATION_MODE }}
+            OPENCLAW_DEFAULT_AGENT=${{ secrets.OPENCLAW_DEFAULT_AGENT }}
+            EOF
+
+            docker build \
+              --build-arg NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }} \
+              --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }} \
+              --build-arg NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }} \
+              -t qey0rb84p977ke3y89oyle49:latest .
+
+            docker stop qey0rb84p977ke3y89oyle49-023606369109 || true
+            docker rm qey0rb84p977ke3y89oyle49-023606369109 || true
+
+            docker run -d --name qey0rb84p977ke3y89oyle49-023606369109 \
+              --network coolify \
+              --label 'coolify.managed=true' \
+              --label 'coolify.resourceName=lemorax' \
+              --label 'coolify.serviceName=lemorax' \
+              --label 'coolify.type=application' \
+              --label 'coolify.applicationId=5' \
+              --label 'traefik.enable=true' \
+              --label 'traefik.http.routers.http-0-qey0rb84p977ke3y89oyle49.rule=Host(`${{ secrets.NEXT_PUBLIC_APP_URL }}`) && PathPrefix(`/`)' \
+              --label 'traefik.http.routers.http-0-qey0rb84p977ke3y89oyle49.entryPoints=http' \
+              --label 'traefik.http.routers.http-0-qey0rb84p977ke3y89oyle49.middlewares=redirect-to-https' \
+              --label 'traefik.http.routers.https-0-qey0rb84p977ke3y89oyle49.rule=Host(`${{ secrets.NEXT_PUBLIC_APP_URL }}`) && PathPrefix(`/`)' \
+              --label 'traefik.http.routers.https-0-qey0rb84p977ke3y89oyle49.entryPoints=https' \
+              --label 'traefik.http.routers.https-0-qey0rb84p977ke3y89oyle49.tls=true' \
+              --label 'traefik.http.routers.https-0-qey0rb84p977ke3y89oyle49.tls.certresolver=letsencrypt' \
+              --label 'traefik.http.services.https-0-qey0rb84p977ke3y89oyle49.loadbalancer.server.port=3000' \
+              --label 'traefik.http.middlewares.gzip.compress=true' \
+              --label 'traefik.http.routers.https-0-qey0rb84p977ke3y89oyle49.middlewares=gzip' \
+              --env-file .env.local \
+              -p 127.0.0.1:3005:3000 \
+              qey0rb84p977ke3y89oyle49:latest
+
+            sleep 10
+            curl -s -o /dev/null -w 'Health: HTTP %{http_code}\n' http://127.0.0.1:3005 || true
