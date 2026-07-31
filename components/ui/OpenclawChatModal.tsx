@@ -90,6 +90,10 @@ function MarkdownContent({ content }: { content: string }) {
         ul: ({ children }) => <ul className="text-[11px] space-y-1 mb-2 pl-3" style={{ color: "var(--text-primary)", listStyleType: "disc" }}>{children}</ul>,
         ol: ({ children }) => <ol className="text-[11px] space-y-1 mb-2 pl-3" style={{ color: "var(--text-primary)", listStyleType: "decimal" }}>{children}</ol>,
         li: ({ children }) => <li className="leading-relaxed" style={{ color: "var(--text-primary)" }}>{children}</li>,
+        table: ({ children }) => <div className="overflow-x-auto max-w-full my-1.5"><table className="min-w-full text-[10px] border-collapse" style={{ border: "1px solid var(--border)" }}>{children}</table></div>,
+        thead: ({ children }) => <thead style={{ background: "var(--bg-tertiary)" }}>{children}</thead>,
+        th: ({ children }) => <th className="px-2 py-1 text-left font-semibold" style={{ border: "1px solid var(--border)", color: "var(--text-primary)" }}>{children}</th>,
+        td: ({ children }) => <td className="px-2 py-1" style={{ border: "1px solid var(--border)", color: "var(--text-primary)" }}>{children}</td>,
         code: ({ inline, children }: any) => inline ? <code className="px-1 py-0.5 rounded text-[10px]" style={{ background: brand.blueSoft, color: brand.blue }}>{children}</code> : <pre className="p-2 rounded-lg text-[9px] overflow-x-auto my-1.5" style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", color: "#1652F0" }}><code>{children}</code></pre>,
         blockquote: ({ children }) => <blockquote className="pl-2 py-0.5 my-1.5 text-[11px]" style={{ borderLeft: "2px solid #1652F0", color: brand.blueMid }}>{children}</blockquote>,
       }}
