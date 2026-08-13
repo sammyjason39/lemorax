@@ -84,7 +84,14 @@ export async function loadVaultContext(sb) {
   const financeTeam = pick(byDept(emps, "Finance"), 2).map((e) => e.nama_lengkap);
   const hrTeam = pick(byDept(emps, "HR"), 2).map((e) => e.nama_lengkap);
 
-  const periode = "2026-06";
+  const { data: latestSales } = await sb
+    .from("sales_report")
+    .select("periode")
+    .order("periode", { ascending: false })
+    .limit(1)
+    .single();
+  const periode = latestSales?.periode ?? "2026-08";
+
   const { data: salesRows } = await sb
     .from("sales_report")
     .select("cabang, total, status, channel")
