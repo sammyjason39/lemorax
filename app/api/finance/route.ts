@@ -16,6 +16,19 @@ export async function GET(req: NextRequest) {
     const { data: all } = await q;
     const allData = all || [];
 
+    // Keep selected-range data for the current view, but use full-year data for
+    // YoY/annual comparisons so a range like 2025-08..2026-04 does not zero out
+    // Jan-Apr 2024/2025 comparison months.
+    const yoyStartYear = Math.min(Number(ps.slice(0, 4)) || 2024, 2024);
+    const yoyEndYear = Math.max(Number(pe.slice(0, 4)) || 2026, 2026);
+    let yoyQ = sb.from("finance").select("*")
+      .gte("periode", `${yoyStartYear}-01`)
+      .lte("periode", `${yoyEndYear}-12`)
+      .limit(30000);
+    if (cabang.length) yoyQ = yoyQ.in("cabang", cabang);
+    const { data: yoyRows } = await yoyQ;
+    const comparisonData = yoyRows || [];
+
     const income = allData.filter((r) => r.tipe === "Pemasukan");
     const expense = allData.filter((r) => r.tipe === "Pengeluaran");
     const totalIncome = income.reduce((s, r) => s + (r.jumlah || 0), 0);
@@ -40,7 +53,7 @@ export async function GET(req: NextRequest) {
 
     // Cabang YoY
     const cabangYoY: Record<string, { "2024": number; "2025": number; "2026": number }> = {};
-    income.forEach((r) => {
+    comparisonData.filter((r) => r.tipe === "Pemasukan").forEach((r) => {
       const year = r.periode.slice(0, 4);
       if (!cabangYoY[r.cabang]) cabangYoY[r.cabang] = { "2024": 0, "2025": 0, "2026": 0 };
       if (["2024","2025","2026"].includes(year)) (cabangYoY[r.cabang] as any)[year] += r.jumlah || 0;
@@ -57,7 +70,7 @@ export async function GET(req: NextRequest) {
 
     // Annual summary
     const annualSummary = ["2024","2025","2026"].map((year) => {
-      const rows = allData.filter((r) => r.periode.startsWith(year));
+      const rows = comparisonData.filter((r) => r.periode.startsWith(year));
       const rev = rows.filter((r) => r.tipe === "Pemasukan").reduce((s, r) => s + (r.jumlah || 0), 0);
       const exp = rows.filter((r) => r.tipe === "Pengeluaran").reduce((s, r) => s + (r.jumlah || 0), 0);
       return { year, revenue: rev, expense: exp, net: rev - exp, margin: rev > 0 ? ((rev - exp) / rev) * 100 : 0 };

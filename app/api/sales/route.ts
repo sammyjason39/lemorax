@@ -54,8 +54,13 @@ export async function GET(req: NextRequest) {
     }));
 
     // YoY data
+    // Use full-year bounds so comparison years are not accidentally filtered out.
+    // Example: selected range 2025-08..2026-04 still needs Jan-Apr 2024/2025
+    // to compare against Jan-Apr 2026.
+    const yoyStartYear = Math.min(Number(ps.slice(0, 4)) || 2024, 2024);
+    const yoyEndYear = Math.max(Number(pe.slice(0, 4)) || 2026, 2026);
     const { data: yoyRaw } = await sb.rpc("get_sales_yoy", {
-      p_start: ps, p_end: pe, p_cabang: cabangArg,
+      p_start: `${yoyStartYear}-01`, p_end: `${yoyEndYear}-12`, p_cabang: cabangArg,
     });
     const yoyData = (yoyRaw || []).map((r: any) => ({
       month: r.month, "2024": Number(r.y2024), "2025": Number(r.y2025), "2026": Number(r.y2026),
