@@ -27,15 +27,16 @@ export function getCabangTargetRate(cabang) {
  * With 5 work days/week, map target rate to hadir 4 or 5.
  * partialWeekProb is calibrated so expected weekly attendance equals `rate`.
  */
-export function buildRealisticWeekValues(employeeId, cabang, periode, weekIndex) {
-  const total = 5;
+export function buildRealisticWeekValues(employeeId, cabang, periode, weekIndex, holidaysInWeek = 0) {
+  const baseTotal = 5;
+  const total = Math.max(1, baseTotal - holidaysInWeek);
   const cabangRate = getCabangTargetRate(cabang);
   const empOffset = (seededRand(hashSeed(`emp|${employeeId}`))() - 0.5) * 0.008;
   const rate = Math.min(0.985, Math.max(0.94, cabangRate + empOffset));
 
   const weekRng = seededRand(hashSeed(`${employeeId}|${cabang}|${periode}|w${weekIndex}`));
   const partialWeekProb = Math.min(0.35, Math.max(0.05, (1 - rate) / 0.2));
-  const hadir = weekRng() < partialWeekProb ? 4 : 5;
+  const hadir = weekRng() < partialWeekProb ? Math.max(0, total - 1) : total;
   const absent = total - hadir;
 
   let sakit = 0;

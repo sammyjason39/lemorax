@@ -12,6 +12,8 @@
     "seed:extend": "node scripts/seed-extend-data.mjs",
     "seed:extend:dry": "node scripts/seed-extend-data.mjs --dry-run",
     "seed:extend:full": "node scripts/seed-extend-data.mjs --full-month",
+    "sync:holidays": "node scripts/sync-indonesian-holidays.mjs --years=2026,2027",
+    "seed:extend:holidays": "npm run sync:holidays && npm run seed:extend",
     "seed:absensi:repair": "node scripts/repair-absensi-rates.mjs",
     "seed:absensi:dedupe": "node scripts/dedupe-absensi.mjs",
     "setup:vault-supabase": "node scripts/setup-vault-supabase.mjs",

@@ -39,6 +39,44 @@ const sb = createClient(url, key, { auth: { persistSession: false } });
 const BATCH = 100;
 const DATA_TABLES = ["kpi", "absensi", "sales_report", "finance", "crm", "marketing"];
 
+let HOLIDAY_SET = new Set();
+
+async function loadHolidaySet(years) {
+  const { data, error } = await sb
+    .from("indonesian_holidays")
+    .select("date")
+    .in("year", years);
+  if (error) {
+    console.warn("Could not load holidays:", error.message);
+    return;
+  }
+  HOLIDAY_SET = new Set((data ?? []).map((h) => h.date));
+}
+
+function weekDateRange(periode, weekIndex) {
+  const [y, m] = periode.split("-").map(Number);
+  const firstDay = new Date(y, m - 1, 1);
+  const start = new Date(firstDay);
+  start.setDate(start.getDate() + (weekIndex - 1) * 7);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  const lastDay = new Date(y, m, 0);
+  if (end > lastDay) end.setTime(lastDay.getTime());
+  return { start, end };
+}
+
+function countHolidaysInWeek(periode, weekIndex) {
+  const { start, end } = weekDateRange(periode, weekIndex);
+  let count = 0;
+  const cur = new Date(start);
+  while (cur <= end) {
+    const iso = cur.toISOString().split("T")[0];
+    if (HOLIDAY_SET.has(iso)) count++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return count;
+}
+
 function formatYm(y, m) {
   return `${y}-${String(m).padStart(2, "0")}`;
 }
@@ -239,7 +277,8 @@ function buildAbsensi(sourceAbsensi, periode, weeks) {
     const template = weeksData.slice(0, weeks);
     for (let w = 0; w < weeks; w++) {
       const src = template[w] ?? template[0];
-      const v = buildRealisticWeekValues(empId, src.cabang, periode, w + 1);
+      const holidaysInWeek = countHolidaysInWeek(periode, w + 1);
+      const v = buildRealisticWeekValues(empId, src.cabang, periode, w + 1, holidaysInWeek);
       out.push({
         periode,
         minggu_ke: `Week ${w + 1}`,
@@ -406,6 +445,10 @@ async function resolvePlan() {
 async function main() {
   const { currentMonth, endMonth, maxPeriode, targetMonths, sourcePeriode, throughDate } =
     await resolvePlan();
+
+  const targetYears = [...new Set(targetMonths.map((m) => Number(m.split("-")[0])))].sort((a, b) => a - b);
+  await loadHolidaySet(targetYears);
+  console.log(`   Holidays loaded: ${HOLIDAY_SET.size} days for years ${targetYears.join(", ")}`);
 
   console.log("📊 Lemorax Data Extender");
   console.log(`   DB max periode: ${maxPeriode}`);
