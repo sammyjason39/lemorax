@@ -59,7 +59,7 @@ export function planAgentRun(
 
   // Default: try SQL first for analyst context; direct answer if clearly conceptual
   const isConceptual =
-    /\b(apakah|bagaimana cara|jelaskan|what is|siapa aries|kamu siapa|help|bantuan)\b/i.test(trimmed) &&
+    /\b(apakah|bagaimana cara|jelaskan|what is|siapa airin|kamu siapa|help|bantuan)\b/i.test(trimmed) &&
     !DATA_QUERY_PATTERNS.some((p) => p.test(trimmed));
 
   if (isConceptual) {

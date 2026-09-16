@@ -86,7 +86,7 @@ export const translations = {
     "workspace.oauth_advanced": "Lanjutan: OAuth (perlu Google Cloud Console)",
 
     "dash.title": "Executive Overview",
-    "dash.subtitle": "Ringkasan kondisi bisnis PT Lemorax · ARIES",
+    "dash.subtitle": "Ringkasan kondisi bisnis PT Lemorax · AIRIN",
     "dash.revenue": "Total Revenue",
     "dash.expense": "Total Pengeluaran",
     "dash.profit": "Net Profit",
@@ -183,7 +183,7 @@ export const translations = {
     "workspace.oauth_advanced": "Advanced: OAuth (requires Google Cloud Console)",
 
     "dash.title": "Executive Overview",
-    "dash.subtitle": "PT Lemorax Business Summary · ARIES",
+    "dash.subtitle": "PT Lemorax Business Summary · AIRIN",
     "dash.revenue": "Total Revenue",
     "dash.expense": "Total Expenses",
     "dash.profit": "Net Profit",

@@ -10,7 +10,7 @@ export type AgentLastQuery = {
   queryResult: unknown;
 };
 
-/** Custom ARIES agent — chat input */
+/** Custom AIRIN agent — chat input */
 export type AgentChatInput = {
   message: string;
   sessionId?: string;

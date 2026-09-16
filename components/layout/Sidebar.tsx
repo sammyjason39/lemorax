@@ -31,7 +31,7 @@ import {
 } from "@/lib/periode";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { TranslationKey } from "@/lib/translations";
-import { AriesLogo } from "@/components/ui/AriesLogo";
+import { AirinLogo } from "@/components/ui/AirinLogo";
 import { brand } from "@/lib/brand";
 
 const NAV_ITEMS: { href: string; labelKey: TranslationKey; icon: any; badge?: string }[] = [
@@ -102,7 +102,7 @@ export function Sidebar() {
     >
       {/* Logo */}
       <div className="px-5 py-5 border-b" style={{ borderColor: "var(--border)" }}>
-        <AriesLogo size="md" showTagline />
+        <AirinLogo size="md" showTagline />
       </div>
 
       {/* Navigation */}

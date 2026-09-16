@@ -42,7 +42,7 @@ export async function streamAgentChat(params: {
     }),
   });
 
-  if (!res.ok) throw new Error("Gagal terhubung ke ARIES agent");
+  if (!res.ok) throw new Error("Gagal terhubung ke AIRIN agent");
   if (!res.body) throw new Error("No response body");
 
   const reader = res.body.getReader();

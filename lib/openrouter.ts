@@ -9,11 +9,11 @@ async function vaultContextBlock(userMessage: string): Promise<string> {
   return rag.context ? `\n\n${rag.context}` : "";
 }
 
-export const ARIES_SYSTEM_PROMPT = `Kamu adalah ARIES AI Analyst, asisten bisnis pribadi untuk ${PRINCIPAL_NAME} (PT Lemorax).
+export const AIRIN_SYSTEM_PROMPT = `Kamu adalah AIRIN AI Analyst, asisten bisnis pribadi untuk ${PRINCIPAL_NAME} (PT Lemorax).
 
 PT Lemorax adalah perusahaan retail produk kebersihan dan laundry supply dengan 12 cabang di Indonesia: Medan, Palembang, Tangerang, Jakarta Pusat, Jakarta Selatan, Bandung, Bekasi, Semarang, Yogyakarta, Surabaya, Bali, dan Makassar. Produk utama: deterjen laundry, sabun cuci, cairan pembersih, pewangi pakaian. Revenue stream: B2B (hotel, rumah sakit, laundry besar) dan B2C (e-commerce, retail store). Data mencakup periode Januari 2024 hingga April 2026. Total karyawan: 150 orang.
 
-ARIES adalah platform Business Intelligence custom yang dibangun untuk PT Lemorax.
+AIRIN adalah platform Business Intelligence custom yang dibangun untuk PT Lemorax.
 
 Selalu panggil user **${PRINCIPAL_NAME}**. Jangan sebut "owner".
 
@@ -36,7 +36,7 @@ FORMAT ANGKA dalam jawaban final:
 - Persentase: satu desimal dengan koma (85,5%)
 - Tanggal: format Indonesia (1 Januari 2024)`;
 
-export const ARIES_SQL_PROMPT = `INSTRUKSI PENTING:
+export const AIRIN_SQL_PROMPT = `INSTRUKSI PENTING:
 1. Analisa pertanyaan user secara mendalam dan identifikasi tabel & kolom yang relevan
 2. Generate SQL query PostgreSQL yang VALID dan efisien untuk menjawab pertanyaan
 3. Kembalikan response dalam format JSON VALID dengan struktur TEPAT:
@@ -46,7 +46,7 @@ export const ARIES_SQL_PROMPT = `INSTRUKSI PENTING:
 6. Pastikan JSON valid — tidak ada karakter escape yang salah
 7. DILARANG KERAS menggunakan CTE (klausa WITH). Query HARUS diawali dengan kata SELECT.`;
 
-export const ARIES_FINAL_ANSWER_PROMPT = `Berdasarkan pertanyaan user dan data yang diberikan, berikan analisa bisnis yang:
+export const AIRIN_FINAL_ANSWER_PROMPT = `Berdasarkan pertanyaan user dan data yang diberikan, berikan analisa bisnis yang:
 1. Langsung menjawab pertanyaan dengan angka konkret
 2. Memberikan interpretasi: apakah angka ini bagus/buruk? Dibanding apa?
 3. Menyebutkan pattern atau insight menarik yang terlihat dari data
@@ -55,13 +55,6 @@ export const ARIES_FINAL_ANSWER_PROMPT = `Berdasarkan pertanyaan user dan data y
 6. Format angka Rupiah dengan pemisah titik, persentase dengan koma
 7. Gunakan bullet points atau numbering untuk readability
 8. Jika data kosong atau tidak ada, jelaskan kemungkinan penyebabnya`;
-
-/** @deprecated use ARIES_SYSTEM_PROMPT */
-export const LEMORAX_SYSTEM_PROMPT = ARIES_SYSTEM_PROMPT;
-/** @deprecated use ARIES_SQL_PROMPT */
-export const LEMORAX_SQL_PROMPT = ARIES_SQL_PROMPT;
-/** @deprecated use ARIES_FINAL_ANSWER_PROMPT */
-export const LEMORAX_FINAL_ANSWER_PROMPT = ARIES_FINAL_ANSWER_PROMPT;
 
 const FINAL_ANSWER_MAX_TOKENS = 4096;
 
@@ -100,10 +93,10 @@ export async function generateSQLQuery(
 
   const { content } = await completeChatCompletion({
     messages: buildMessagesWithHistory(
-      ARIES_SYSTEM_PROMPT +
+      AIRIN_SYSTEM_PROMPT +
         vaultBlock +
         "\n\n" +
-        ARIES_SQL_PROMPT +
+        AIRIN_SQL_PROMPT +
         "\n\nGunakan riwayat percakapan jika pertanyaan user merujuk ke topik sebelumnya (mis. 'yang tadi', 'cabang itu', 'bulan ini' setelah dibahas).",
       history,
       `Pertanyaan: ${userMessage}\n\nKembalikan HANYA JSON valid dengan format: {"sql_query": "...", "explanation": "...", "initial_analysis": "..."}`
@@ -126,7 +119,7 @@ export async function* streamDirectAnswer(
 
   yield* streamChatCompletion({
     messages: buildMessagesWithHistory(
-      ARIES_SYSTEM_PROMPT +
+      AIRIN_SYSTEM_PROMPT +
         vaultBlock +
         `\n\nJawab pertanyaan ${PRINCIPAL_NAME} dengan ringkas dan profesional. Prioritaskan Company Vault untuk kebijakan/SOP/konteks internal. Gunakan riwayat percakapan untuk pertanyaan lanjutan — jangan bertanya ulang hal yang sudah dibahas. Jika pertanyaan membutuhkan angka baru dari database, sarankan menanyakan data spesifik (cabang, periode, metrik).`,
       history,
@@ -153,7 +146,7 @@ export async function* streamFinalAnswer(
 
   yield* streamChatCompletion({
     messages: buildMessagesWithHistory(
-      ARIES_SYSTEM_PROMPT + vaultBlock + "\n\n" + ARIES_FINAL_ANSWER_PROMPT,
+      AIRIN_SYSTEM_PROMPT + vaultBlock + "\n\n" + AIRIN_FINAL_ANSWER_PROMPT,
       history,
       userContent
     ),

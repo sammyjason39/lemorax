@@ -31,12 +31,12 @@ const ERR_INTERNAL = -32603;
 
 export async function GET() {
   return Response.json({
-    name: "lemorax-aries",
-    title: "Lemorax ARIES Business Data",
+    name: "lemorax-airin",
+    title: "Lemorax AIRIN Business Data",
     version: "1.0.0",
     protocol: "MCP (Streamable HTTP, stateless JSON-RPC)",
     endpoint: "/api/mcp",
-    auth: "Bearer ARIES_MCP_TOKEN",
+    auth: "Bearer AIRIN_MCP_TOKEN",
     hint:
       "POST JSON-RPC 2.0 messages here. Tools: " +
       mcpTools.map((t) => t.name).join(", "),
@@ -46,7 +46,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   if (!isMcpAuthorized(req)) {
     return Response.json(
-      rpcError(null, ERR_INVALID_REQUEST, "Unauthorized — set Authorization: Bearer <ARIES_MCP_TOKEN>"),
+      rpcError(null, ERR_INVALID_REQUEST, "Unauthorized — set Authorization: Bearer <AIRIN_MCP_TOKEN>"),
       {
         status: 401,
         headers: { "WWW-Authenticate": 'Bearer realm="lemorax-mcp"' },
@@ -104,12 +104,12 @@ async function handleMessage(msg: unknown): Promise<unknown | null> {
             tools: { listChanged: false },
           },
           serverInfo: {
-            name: "lemorax-aries",
-            title: "Lemorax ARIES Business Data",
+            name: "lemorax-airin",
+            title: "Lemorax AIRIN Business Data",
             version: "1.0.0",
           },
           instructions:
-            "MCP server for the Lemorax (ARIES) business dashboard. " +
+            "MCP server for the Lemorax (AIRIN) business dashboard. " +
             "Query business data (sales, finance, HR, KPI, CRM, marketing, social media) and manage the Instagram content plan Kanban. " +
             `Constraints: ${MCP_SCHEMA_HINT.notes.join(" ")}`,
         });

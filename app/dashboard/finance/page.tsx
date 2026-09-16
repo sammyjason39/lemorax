@@ -6,7 +6,7 @@ import { TopBar } from "@/components/layout/TopBar";
 import { MetricCard } from "@/components/cards/MetricCard";
 import { DataTable } from "@/components/tables/DataTable";
 import { formatRupiahShort, formatRupiah, formatPct, formatPeriode } from "@/lib/formatters";
-import { AriesPieChart } from "@/components/charts/PieChart";
+import { AirinPieChart } from "@/components/charts/PieChart";
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, Legend, Cell, ReferenceLine
@@ -118,7 +118,7 @@ export default function FinancePage() {
             <h3 className="text-sm font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
               Breakdown Pengeluaran per Kategori
             </h3>
-            <AriesPieChart data={expenseChartData} loading={isLoading} donut formatter={formatRupiah} height={260} />
+            <AirinPieChart data={expenseChartData} loading={isLoading} donut formatter={formatRupiah} height={260} />
           </div>
 
           {/* Monthly Cashflow */}

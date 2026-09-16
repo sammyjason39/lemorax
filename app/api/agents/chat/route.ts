@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { runAriesAgent } from "@/lib/agents/aries-agent";
+import { runAirinAgent } from "@/lib/agents/airin-agent";
 import { agentEventsToResponse } from "@/lib/agents/sse";
 import type { AgentChatHistoryMessage, AgentLastQuery } from "@/lib/agents/types";
 
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     }
 
     return agentEventsToResponse(
-      runAriesAgent({
+      runAirinAgent({
         message,
         sessionId: body.sessionId ?? "default",
         agentId: body.agentId,

@@ -14,7 +14,7 @@ import { listMessages } from "@/lib/staff-agents/store";
 
 function getBaseUrl(): string {
   return (
-    process.env.ARIES_BASE_URL?.replace(/\/$/, "") ||
+    process.env.AIRIN_BASE_URL?.replace(/\/$/, "") ||
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
     "http://127.0.0.1:3000"
   );

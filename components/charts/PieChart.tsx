@@ -17,7 +17,7 @@ interface PieData {
   color?: string;
 }
 
-interface AriesPieChartProps {
+interface AirinPieChartProps {
   data: PieData[];
   loading?: boolean;
   donut?: boolean;
@@ -49,13 +49,13 @@ const CustomTooltip = ({ active, payload, formatter }: any) => {
   );
 };
 
-export function AriesPieChart({
+export function AirinPieChart({
   data,
   loading,
   donut = false,
   formatter,
   height = 240,
-}: AriesPieChartProps) {
+}: AirinPieChartProps) {
   const chartData = useMemo(() => {
     const sorted = [...data].sort((a, b) => b.value - a.value);
     return sorted.map((entry, i) => ({

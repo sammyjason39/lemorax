@@ -17,7 +17,7 @@ export function errorResult(message: string): McpToolResult {
 
 /** Shared Bearer-token auth for MCP + tool endpoints. */
 export function isMcpAuthorized(req: Request): boolean {
-  const secret = process.env.ARIES_MCP_TOKEN || process.env.ARIES_TOOL_SECRET;
+  const secret = process.env.AIRIN_MCP_TOKEN || process.env.AIRIN_TOOL_SECRET;
   if (!secret) return false;
   const auth = req.headers.get("authorization");
   if (!auth?.startsWith("Bearer ")) return false;
@@ -27,7 +27,7 @@ export function isMcpAuthorized(req: Request): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-/** Reuse the existing read-only SQL policy used by the ARIES agent. */
+/** Reuse the existing read-only SQL policy used by the AIRIN agent. */
 export async function runBusinessQuery(sql: string, source: string) {
   const validation = validateReadOnlySql(sql);
   if (!validation.ok) {

@@ -3,7 +3,7 @@ title: Content Plan — Social Media Kanban
 status: draft
 created: 2026-06-10
 updated: 2026-06-10
-product: Lemorax ARIES Dashboard
+product: Lemorax AIRIN Dashboard
 module: Social Media / Soca Agent
 ---
 

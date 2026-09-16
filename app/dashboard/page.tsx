@@ -8,7 +8,7 @@ import { MetricCard } from "@/components/cards/MetricCard";
 import { AlertCard } from "@/components/cards/AlertCard";
 import { RevenueLineChart } from "@/components/charts/RevenueLineChart";
 import { BranchBarChart } from "@/components/charts/BranchBarChart";
-import { AriesPieChart } from "@/components/charts/PieChart";
+import { AirinPieChart } from "@/components/charts/PieChart";
 import { formatRupiahShort, formatPct, getInitials, calcDelta } from "@/lib/formatters";
 import { formatPeriodeFilter } from "@/lib/periode";
 import { brand, domain, CRM_STATUS_COLORS, KPI_STATUS_COLORS, getCategoricalColor } from "@/lib/brand";
@@ -178,14 +178,14 @@ export default function OverviewPage() {
             <h3 className="text-sm font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
               CRM Pipeline Status
             </h3>
-            <AriesPieChart data={pipelineChartData} loading={isLoading} donut />
+            <AirinPieChart data={pipelineChartData} loading={isLoading} donut />
           </div>
 
           <div className="card-base p-5">
             <h3 className="text-sm font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
               KPI Status Distribution
             </h3>
-            <AriesPieChart data={kpiChartData} loading={isLoading} donut />
+            <AirinPieChart data={kpiChartData} loading={isLoading} donut />
           </div>
         </div>
 

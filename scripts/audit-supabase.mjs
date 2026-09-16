@@ -25,7 +25,7 @@ if (!url || !key) {
 const sb = createClient(url, key, { auth: { persistSession: false } });
 
 const EXPECTED_TABLES = {
-  // Business BI data (from ARIES prompts)
+  // Business BI data (from AIRIN prompts)
   employees: { minRows: 1, purpose: "Data karyawan Lemorax" },
   kpi: { minRows: 1, purpose: "KPI per karyawan" },
   absensi: { minRows: 1, purpose: "Absensi mingguan" },
@@ -43,7 +43,7 @@ const EXPECTED_TABLES = {
 
 const STAFF_AGENT_IDS = [
   "executive-assistant",
-  "aries-analyst",
+  "airin-analyst",
   "finance-guardian",
   "marketing-pulse",
   "hr-companion",
@@ -52,7 +52,7 @@ const STAFF_AGENT_IDS = [
 const STAFF_CONV_IDS = [
   "dm-executive-assistant",
   "group-executive",
-  "dm-aries-analyst",
+  "dm-airin-analyst",
   "dm-finance-guardian",
   "dm-marketing-pulse",
   "dm-hr-companion",

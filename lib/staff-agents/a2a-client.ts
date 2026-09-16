@@ -8,7 +8,7 @@ import type { Message } from "@a2a-js/sdk";
 
 function getBaseUrl(): string {
   return (
-    process.env.ARIES_BASE_URL?.replace(/\/$/, "") ||
+    process.env.AIRIN_BASE_URL?.replace(/\/$/, "") ||
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
     "http://127.0.0.1:3000"
   );

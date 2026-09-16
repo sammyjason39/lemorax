@@ -22,7 +22,7 @@ async function* runQueryBusinessDataTool(
   const result = await queryBusinessData({
     sql_query,
     explanation,
-    source: "aries-agent",
+    source: "airin-agent",
   });
 
   const resultData = result.ok
@@ -41,7 +41,7 @@ async function* runQueryBusinessDataTool(
 
   yield {
     type: "meta",
-    source: "aries",
+    source: "airin",
     sql_query: result.ok ? result.sql_query : sql_query,
     explanation,
     initial_analysis,
@@ -88,7 +88,7 @@ async function* runContinueDataAnswerTool(
 
   yield {
     type: "meta",
-    source: "aries",
+    source: "airin",
     sql_query: ctx.lastQuery.sqlQuery,
     queryResult: ctx.lastQuery.queryResult,
     note: "Melanjutkan analisis dari query sebelumnya",
@@ -106,9 +106,9 @@ async function* runContinueDataAnswerTool(
 }
 
 /**
- * Custom ARIES agent loop — Qwen-backed, tool registry ready for future capabilities.
+ * Custom AIRIN agent loop — Qwen-backed, tool registry ready for future capabilities.
  */
-export async function* runAriesAgent(input: AgentChatInput): AsyncGenerator<AgentChatEvent> {
+export async function* runAirinAgent(input: AgentChatInput): AsyncGenerator<AgentChatEvent> {
   const message = input.message.trim();
   if (!message) {
     yield { type: "error", message: "Message required" };
@@ -124,7 +124,7 @@ export async function* runAriesAgent(input: AgentChatInput): AsyncGenerator<Agen
   const plan = planAgentRun(message, { history: input.history, lastQuery: input.lastQuery });
   yield {
     type: "meta",
-    source: "aries",
+    source: "airin",
     tools: plan.tools,
     note: plan.reason,
   };

@@ -139,7 +139,7 @@ function enrichDelegations(
 function inferKeywordDelegations(userMessage: string, agents: StaffAgent[]): string[] {
   const t = userMessage.toLowerCase();
   const rules: [RegExp, string][] = [
-    [/\b(revenue|kpi|data|sql|analisa|penjualan|omzet)\b/, "aries-analyst"],
+    [/\b(revenue|kpi|data|sql|analisa|penjualan|omzet)\b/, "airin-analyst"],
     [/\b(finance|keuangan|cashflow|pengeluaran|pemasukan|margin|budget)\b/, "finance-guardian"],
     [/\b(marketing|campaign|roas|iklan|promo|ads)\b/, "marketing-pulse"],
     [/\b(hr|karyawan|absensi|headcount|staff|pegawai|tim)\b/, "hr-companion"],

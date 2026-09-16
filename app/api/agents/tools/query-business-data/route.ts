@@ -4,7 +4,7 @@ import { queryBusinessData } from "@/lib/agents/query-business-data";
 export const runtime = "nodejs";
 
 function getToolSecret(): string | undefined {
-  return process.env.ARIES_TOOL_SECRET || process.env.ARIES_MCP_TOKEN;
+  return process.env.AIRIN_TOOL_SECRET || process.env.AIRIN_MCP_TOKEN;
 }
 
 function isAuthorized(req: NextRequest): boolean {

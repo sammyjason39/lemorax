@@ -12,7 +12,7 @@ export function getDisplayName(agent: StaffAgent): string {
 
 const CHAT_ROLE_SHORT: Record<string, string> = {
   [EXECUTIVE_ASSISTANT_ID]: "Chief of Staff",
-  "aries-analyst": "Data",
+  "airin-analyst": "Data",
   "finance-guardian": "Finance",
   "marketing-pulse": "Marketing",
   "hr-companion": "HR",

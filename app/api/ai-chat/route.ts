@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { runAriesAgent } from "@/lib/agents/aries-agent";
+import { runAirinAgent } from "@/lib/agents/airin-agent";
 import { agentEventsToResponse } from "@/lib/agents/sse";
 
-/** Legacy route — delegates to the same ARIES agent as /api/agents/chat */
+/** Legacy route — delegates to the same AIRIN agent as /api/agents/chat */
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as {
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     }
 
     return agentEventsToResponse(
-      runAriesAgent({
+      runAirinAgent({
         message,
         sessionId: body.sessionId ?? "default",
         history: body.history,

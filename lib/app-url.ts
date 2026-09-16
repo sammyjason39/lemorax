@@ -6,7 +6,7 @@ const LOCAL_FALLBACK = "http://localhost:3000";
 export function resolveAppBaseUrl(req?: NextRequest, requestOrigin?: string): string {
   const fromEnv = (
     process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.ARIES_BASE_URL
+    process.env.AIRIN_BASE_URL
   )?.trim();
   if (fromEnv) return fromEnv.replace(/\/$/, "");
 

@@ -7,7 +7,7 @@ import { TopBar } from "@/components/layout/TopBar";
 import { MetricCard } from "@/components/cards/MetricCard";
 import { DataTable } from "@/components/tables/DataTable";
 import { formatRupiahShort, formatRupiah, formatPct, getCRMStatusColor, formatDateID } from "@/lib/formatters";
-import { AriesPieChart } from "@/components/charts/PieChart";
+import { AirinPieChart } from "@/components/charts/PieChart";
 import { AlertTriangle, X } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, Cell
@@ -102,7 +102,7 @@ export default function CRMPage() {
           {/* Tipe Bisnis */}
           <div className="card-base p-5">
             <h3 className="text-sm font-semibold mb-2" style={{ color: "var(--text-primary)" }}>Breakdown Tipe Bisnis</h3>
-            <AriesPieChart data={tipeChartData} loading={isLoading} donut formatter={formatRupiah} />
+            <AirinPieChart data={tipeChartData} loading={isLoading} donut formatter={formatRupiah} />
           </div>
 
           {/* Top AMs */}

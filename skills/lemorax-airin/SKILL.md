@@ -1,20 +1,20 @@
 ---
-name: lemorax-aries
-description: Query Lemorax ARIES business data via MCP connector.
+name: lemorax-airin
+description: Query Lemorax AIRIN business data via MCP connector.
 version: 1.0.0
 author: Samuel Jason
 license: MIT
 platforms: [linux, macos, windows]
 metadata:
   hermes:
-    tags: [lemorax, aries, business-data, mcp, dashboard, laundry, content-plan]
+    tags: [lemorax, airin, business-data, mcp, dashboard, laundry, content-plan]
     category: productivity
     related_skills: []
 ---
 
-# Lemorax ARIES Skill
+# Lemorax AIRIN Skill
 
-Plug-and-play connector ke **Lemorax ARIES Dashboard** — AI business dashboard
+Plug-and-play connector ke **Lemorax AIRIN Dashboard** — AI business dashboard
 untuk bisnis laundry/retail multi-cabang (Supabase-backed). Setelah
 terkonfigurasi, agent bisa langsung menjawab pertanyaan data bisnis dan
 mengelola pipeline konten Instagram milik Pak Anjas.
@@ -25,7 +25,7 @@ mengelola pipeline konten Instagram milik Pak Anjas.
   deals, absensi karyawan, performa marketing, analytics sosmed
 - User minta analisis perbandingan periode (bulan ini vs bulan lalu)
 - User minta ide konten Instagram / mengelola Content Plan Kanban
-- User menyebut "lemorax", "aries", "dashboard", "Pak Anjas", "data laundry"
+- User menyebut "lemorax", "airin", "dashboard", "Pak Anjas", "data laundry"
 - User minta setup koneksi ke dashboard Lemorax
 
 ## Prerequisites
@@ -40,13 +40,13 @@ mengelola pipeline konten Instagram milik Pak Anjas.
      lemorax:
        url: "http://localhost:3001/api/mcp"
        headers:
-         Authorization: "Bearer <ARIES_MCP_TOKEN>"
+         Authorization: "Bearer <AIRIN_MCP_TOKEN>"
        timeout: 120
    ```
    Token: minta ke user, atau baca dari `~/GitHub/lemorax/.env.local`
-   (`ARIES_MCP_TOKEN=`) bila ada. Generate baru: `openssl rand -hex 32`.
+   (`AIRIN_MCP_TOKEN=`) bila ada. Generate baru: `openssl rand -hex 32`.
 3. Verifikasi koneksi: `curl http://localhost:3001/api/mcp` harus
-   mengembalikan JSON `{"name":"lemorax-aries",...}`.
+   mengembalikan JSON `{"name":"lemorax-airin",...}`.
 4. Restart Hermes setelah mengubah config agar MCP server ter-load.
 
 ## How to Run

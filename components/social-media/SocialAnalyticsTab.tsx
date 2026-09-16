@@ -107,8 +107,14 @@ function PostCard({ post, onOpen }: { post: SocialPost; onOpen: (p: ModalPost) =
   );
 }
 
+const MAX_POSTS = 48;
+const PAGE_SIZE = 12;
+
 export function SocialAnalyticsTab() {
-  const { data, isLoading, mutate } = useSWR("/api/social-media", fetcher, { refreshInterval: 120000 });
+  const [postsLimit, setPostsLimit] = useState(PAGE_SIZE);
+  const { data, isLoading, mutate } = useSWR(`/api/social-media?postsLimit=${postsLimit}`, fetcher, {
+    refreshInterval: 120000,
+  });
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [selected, setSelected] = useState<ModalPost | null>(null);
@@ -120,10 +126,15 @@ export function SocialAnalyticsTab() {
     setSyncing(true);
     setSyncMsg(null);
     try {
+      const isDeep = postsLimit > PAGE_SIZE;
       const res = await fetch("/api/social-media/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ usernames: ["anjas_maradita"], includeAboutSection: false }),
+        body: JSON.stringify({
+          usernames: ["anjas_maradita"],
+          includeAboutSection: false,
+          ...(isDeep ? { deep: true, limit: postsLimit } : {}),
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Sync gagal");
@@ -293,9 +304,14 @@ export function SocialAnalyticsTab() {
       )}
 
       <div className="card-base p-5">
-        <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
-          Konten Terbaru
-        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            Konten Terbaru
+          </h3>
+          <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+            {posts.length} dari maks {MAX_POSTS} konten
+          </span>
+        </div>
         {isLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
@@ -307,11 +323,25 @@ export function SocialAnalyticsTab() {
             Belum ada konten. Jalankan Sync Real time untuk tarik data terbaru dari Instagram.
           </p>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {posts.slice(0, 12).map((p: SocialPost) => (
-              <PostCard key={p.id} post={p} onOpen={setSelected} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {posts.map((p: SocialPost) => (
+                <PostCard key={p.id} post={p} onOpen={setSelected} />
+              ))}
+            </div>
+            {postsLimit < MAX_POSTS && (
+              <div className="flex items-center justify-center mt-5">
+                <button
+                  type="button"
+                  onClick={() => setPostsLimit((n) => Math.min(n + PAGE_SIZE, MAX_POSTS))}
+                  className="rounded-lg px-5 py-2 text-sm font-semibold transition-opacity hover:opacity-85"
+                  style={{ background: brand.blueSoft, color: brand.blue, border: `1px solid ${brand.blue}33` }}
+                >
+                  Load more (+{PAGE_SIZE})
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

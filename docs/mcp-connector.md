@@ -1,4 +1,4 @@
-# ARIES MCP Connector — Hermes & Claude Code
+# AIRIN MCP Connector — Hermes & Claude Code
 
 Lemorax exposes an **MCP (Model Context Protocol) server** at `/api/mcp` so local
 AI agents (Hermes, Claude Code, or any MCP client) can talk to the business data
@@ -16,7 +16,7 @@ plan Kanban.
 
 - **Transport:** Streamable HTTP (stateless JSON-RPC 2.0) — setiap request
   berdiri sendiri, tidak ada session yang perlu dipertahankan.
-- **Auth:** header `Authorization: Bearer <ARIES_MCP_TOKEN>`.
+- **Auth:** header `Authorization: Bearer <AIRIN_MCP_TOKEN>`.
 - **Keamanan:** semua query SQL lewat `sql-policy.ts` (read-only, whitelist
   tabel, PII auto-redacted), semua aktivitas tercatat di tabel
   `agent_query_log`.
@@ -24,7 +24,7 @@ plan Kanban.
 ## 1. Jalankan app di port 3001
 
 ```bash
-cp .env.example .env.local   # isi Supabase + ARIES_MCP_TOKEN
+cp .env.example .env.local   # isi Supabase + AIRIN_MCP_TOKEN
 npm run dev:mcp              # next dev -p 3001
 ```
 
@@ -49,11 +49,11 @@ mcp_servers:
   lemorax:
     url: "http://localhost:3001/api/mcp"
     headers:
-      Authorization: "Bearer <ARIES_MCP_TOKEN>"
+      Authorization: "Bearer <AIRIN_MCP_TOKEN>"
     timeout: 120
 ```
 
-> Cara paling mudah: install **skill `lemorax-aries`** (lihat bagian bawah
+> Cara paling mudah: install **skill `lemorax-airin`** (lihat bagian bawah
 > README) — skill ini otomatis memandu setup + punya playbook query bisnis.
 
 Contoh pemakaian di chat Hermes:
@@ -65,7 +65,7 @@ Contoh pemakaian di chat Hermes:
 
 ```bash
 claude mcp add --transport http lemorax http://localhost:3001/api/mcp \
-  --header "Authorization: Bearer <ARIES_MCP_TOKEN>"
+  --header "Authorization: Bearer <AIRIN_MCP_TOKEN>"
 ```
 
 Atau manual di `.mcp.json` (project) / `~/.claude.json` (global):
@@ -77,7 +77,7 @@ Atau manual di `.mcp.json` (project) / `~/.claude.json` (global):
       "type": "http",
       "url": "http://localhost:3001/api/mcp",
       "headers": {
-        "Authorization": "Bearer <ARIES_MCP_TOKEN>"
+        "Authorization": "Bearer <AIRIN_MCP_TOKEN>"
       }
     }
   }
@@ -105,11 +105,11 @@ Atau manual di `.mcp.json` (project) / `~/.claude.json` (global):
 3. **PII redacted** — `no_telepon`, `email`, `gaji_pokok`, dll otomatis
    jadi `[REDACTED]`.
 4. **Audit** — setiap query tercatat di `agent_query_log` dengan source
-   `mcp` / `mcp-aries`.
+   `mcp` / `mcp-airin`.
 
 ## Deploy
 
-Endpoint yang sama bekerja di production (VPS/Coolify). Set `ARIES_MCP_TOKEN`
+Endpoint yang sama bekerja di production (VPS/Coolify). Set `AIRIN_MCP_TOKEN`
 di environment, lalu arahkan Hermes/Claude Code ke
 `https://<domain>/api/mcp`. Untuk akses lokal-only, jangan ekspos `/api/mcp`
 ke internet publik (blok di nginx bila perlu).

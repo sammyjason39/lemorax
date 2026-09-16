@@ -6,9 +6,9 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 
 export const metadata: Metadata = {
-  title: "ARIES — Business Intelligence",
+  title: "AIRIN — Business Intelligence",
   description:
-    "ARIES Business Intelligence untuk PT Lemorax — monitoring kondisi bisnis secara real-time",
+    "AIRIN Business Intelligence untuk PT Lemorax — monitoring kondisi bisnis secara real-time",
 };
 
 export default function RootLayout({

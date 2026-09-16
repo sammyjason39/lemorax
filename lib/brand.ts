@@ -31,7 +31,7 @@ export const brand = {
   warning: "#EAA42A",
 } as const;
 
-/** User utama Lemorax / ARIES. */
+/** User utama Lemorax / AIRIN. */
 export const PRINCIPAL_NAME = "Pak Anjas";
 
 export const domain = {

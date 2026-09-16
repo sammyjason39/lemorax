@@ -1,6 +1,6 @@
 import type { ChatMessage } from "@/lib/ai/types";
 
-/** Ollama defaults num_ctx to 2048 — too small for ARIES system prompt + SQL data + answer. */
+/** Ollama defaults num_ctx to 2048 — too small for AIRIN system prompt + SQL data + answer. */
 export const OLLAMA_NUM_CTX = 16_384;
 export const OLLAMA_DEFAULT_NUM_PREDICT = 4096;
 

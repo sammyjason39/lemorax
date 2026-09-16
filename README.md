@@ -1,4 +1,4 @@
-# Lemorax — ARIES Dashboard
+# Lemorax — AIRIN Dashboard
 
 AI business dashboard untuk Lemorax (laundry & retail multi-cabang) dengan
 **staf AI virtual** yang bisa diobrol lewat chat, plus **MCP server** yang
@@ -19,11 +19,11 @@ membuat dashboard ini bisa di-*tap in* langsung oleh AI agent eksternal
 | Finance | Revenue vs expense, trend bulanan |
 | Marketing | Campaign performance |
 | Social Media | Analytics Instagram + **Content Plan Kanban** (ide → script → review → scheduled → published) |
-| AI Analyst | Chat dengan **ARIES agent** — tanya data bisnis pakai bahasa natural |
+| AI Analyst | Chat dengan **AIRIN agent** — tanya data bisnis pakai bahasa natural |
 | Vault / Workspace | Dokumen internal, knowledge base |
 
 ### AI di dalam dashboard
-- **ARIES agent** (`/dashboard/ai-analyst` + floating chat) — analisis data
+- **AIRIN agent** (`/dashboard/ai-analyst` + floating chat) — analisis data
   bisnis via chat, generate SQL read-only, stream jawaban.
 - **Staff Agents** (`lib/staff-agents/`) — multi-agent (Soca = social media,
   dll) dengan orchestrator, memory, dan jadwal.
@@ -44,7 +44,7 @@ npm install
 # 2. Setup environment
 cp .env.example .env.local
 # isi: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
-#       SUPABASE_SERVICE_ROLE_KEY, ARIES_MCP_TOKEN
+#       SUPABASE_SERVICE_ROLE_KEY, AIRIN_MCP_TOKEN
 # generate token: openssl rand -hex 32
 
 # 3. Setup database (Supabase SQL Editor atau MCP)
@@ -84,14 +84,14 @@ mcp_servers:
   lemorax:
     url: "http://localhost:3001/api/mcp"
     headers:
-      Authorization: "Bearer <ARIES_MCP_TOKEN>"
+      Authorization: "Bearer <AIRIN_MCP_TOKEN>"
 ```
 
 3. Buka `hermes` — langsung bisa: *"Berapa revenue bulan ini dibanding bulan
    lalu?"* atau *"@lemorax buatin 3 ide konten IG dari performa terakhir"*.
 
-**Atau cara instan:** install skill **`lemorax-aries`** dari
-[`skills/lemorax-aries/`](skills/lemorax-aries/) — copy foldernya ke
+**Atau cara instan:** install skill **`lemorax-airin`** dari
+[`skills/lemorax-airin/`](skills/lemorax-airin/) — copy foldernya ke
 `~/.hermes/skills/`, lalu di Hermes: `/skills install` atau langsung
 `/lemorax` untuk playbook lengkap + langkah setup otomatis.
 
@@ -99,7 +99,7 @@ mcp_servers:
 
 ```bash
 claude mcp add --transport http lemorax http://localhost:3001/api/mcp \
-  --header "Authorization: Bearer <ARIES_MCP_TOKEN>"
+  --header "Authorization: Bearer <AIRIN_MCP_TOKEN>"
 ```
 
 ### Agent MCP lain (Cursor, dll)
@@ -124,13 +124,13 @@ app/
   api/                # API routes per domain + /api/mcp (MCP server) + /api/ai-chat
 components/           # UI components per modul (cards, charts, tables, ...)
 lib/
-  agents/             # ARIES agent (planner, SQL policy, query executor, SSE)
+  agents/             # AIRIN agent (planner, SQL policy, query executor, SSE)
   staff-agents/       # Multi-agent framework (orchestrator, memory, schedules)
   mcp/                # MCP server tools & schemas (konektor AI eksternal)
   openrouter.ts       # LLM calls
   supabase.ts         # DB clients (anon + service role)
 supabase/             # schema.sql + migrations/
-skills/               # Skill bundle (marketing-basics, lemorax-aries)
+skills/               # Skill bundle (marketing-basics, lemorax-airin)
 docs/                 # mcp-connector.md + planning artifacts
 deploy/               # nginx, GitHub Actions docs
 ```
@@ -138,6 +138,6 @@ deploy/               # nginx, GitHub Actions docs
 ## Deploy
 
 Docker + Coolify VPS — lihat `Dockerfile`, `docker-compose.yml`, dan
-`deploy/GITHUB_ACTIONS.md`. Untuk produksi, set `ARIES_MCP_TOKEN` di
+`deploy/GITHUB_ACTIONS.md`. Untuk produksi, set `AIRIN_MCP_TOKEN` di
 environment dan arahkan agent ke `https://<domain>/api/mcp`. Blok `/api/mcp`
 di nginx bila ingin endpoint tetap lokal-only.

@@ -315,7 +315,7 @@ export default function AIAnalystPage() {
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantId
-            ? { ...m, isThinking: false, content: `❌ **Error:** ${e.message}\n\nPastikan ARIES agent aktif dan env OPENROUTER_API_KEY sudah dikonfigurasi.` }
+            ? { ...m, isThinking: false, content: `❌ **Error:** ${e.message}\n\nPastikan AIRIN agent aktif dan env OPENROUTER_API_KEY sudah dikonfigurasi.` }
             : m
         )
       );
@@ -341,7 +341,7 @@ export default function AIAnalystPage() {
       `}</style>
 
       <div className="page-enter flex flex-col h-screen">
-        <TopBar title="AI Analyst" subtitle="ARIES AI · Tanya apa saja tentang bisnis PT Lemorax" />
+        <TopBar title="AI Analyst" subtitle="AIRIN AI · Tanya apa saja tentang bisnis PT Lemorax" />
 
         <div className="flex flex-1 overflow-hidden">
           {/* ── Chat Panel ── */}
@@ -361,7 +361,7 @@ export default function AIAnalystPage() {
                     <Sparkles size={28} color="#1652F0" />
                   </div>
                   <h2 className="text-lg font-sans font-extrabold mb-2" style={{ color: "#1652F0", letterSpacing: "-0.03em" }}>
-                    Halo, saya ARIES AI Analyst
+                    Halo, saya AIRIN AI Analyst
                   </h2>
                   <p className="text-sm mb-6 max-w-sm" style={{ color: "var(--text-secondary)" }}>
                     Tanya saya apa saja tentang performa bisnis, sales, karyawan, atau keuangan PT Lemorax.

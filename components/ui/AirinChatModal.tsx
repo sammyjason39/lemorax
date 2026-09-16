@@ -21,7 +21,7 @@ interface Message {
   isThinking?: boolean;
 }
 
-function AriesAvatar({ size = 24 }: { size?: number }) {
+function AirinAvatar({ size = 24 }: { size?: number }) {
   return (
     <div
       className="flex items-center justify-center shrink-0 font-bold text-white"
@@ -42,7 +42,7 @@ function AriesAvatar({ size = 24 }: { size?: number }) {
 function ThinkingBubble() {
   return (
     <div className="flex gap-2">
-      <AriesAvatar size={24} />
+      <AirinAvatar size={24} />
 
       <div className="px-4 py-3 rounded-2xl flex items-center gap-3" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", minWidth: 150 }}>
         <div className="relative shrink-0">
@@ -103,7 +103,7 @@ function MarkdownContent({ content }: { content: string }) {
   );
 }
 
-export function AriesChatModal() {
+export function AirinChatModal() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -215,10 +215,10 @@ export function AriesChatModal() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--border)", background: "var(--bg-secondary)" }}>
             <div className="flex items-center gap-3">
-              <AriesAvatar size={32} />
+              <AirinAvatar size={32} />
               <div>
                 <h3 className="text-sm font-sans font-extrabold" style={{ color: brand.blue, letterSpacing: "-0.03em" }}>
-                  ARIES AI
+                  AIRIN AI
                 </h3>
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: brand.blue }} />
@@ -241,10 +241,10 @@ export function AriesChatModal() {
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center pb-8">
                 <div className="mb-4">
-                  <AriesAvatar size={56} />
+                  <AirinAvatar size={56} />
                 </div>
                 <h2 className="text-sm font-sans font-extrabold mb-1.5" style={{ color: brand.blue }}>
-                  Halo, saya ARIES AI
+                  Halo, saya AIRIN AI
                 </h2>
                 <p className="text-[11px] mb-6 px-4" style={{ color: "var(--text-secondary)" }}>
                   Asisten bisnis PT Lemorax. Tanya performa cabang, sales, atau data keuangan.
@@ -283,7 +283,7 @@ export function AriesChatModal() {
 
                 return (
                   <div key={msg.id} className="flex gap-2">
-                    <AriesAvatar size={24} />
+                    <AirinAvatar size={24} />
                     <div className="flex-1 max-w-[85%] flex flex-col items-start">
                       <div className="px-4 py-3 rounded-2xl ai-prose w-full shadow-md" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }}>
                         {msg.content ? (
@@ -317,7 +317,7 @@ export function AriesChatModal() {
                     sendMessage(input);
                   }
                 }}
-                placeholder="Tanya ARIES AI..."
+                placeholder="Tanya AIRIN AI..."
                 rows={1}
                 className="flex-1 bg-transparent text-[11px] p-1 outline-none resize-none scrollbar-thin"
                 style={{ color: "var(--text-primary)", maxHeight: "100px" }}
@@ -332,7 +332,7 @@ export function AriesChatModal() {
               </button>
             </div>
             <div className="text-[9px] text-center mt-2 flex items-center justify-center gap-1 opacity-60" style={{ color: "var(--text-muted)" }}>
-              <Sparkles size={9} color={brand.blue} /> ARIES AI · PT Lemorax
+              <Sparkles size={9} color={brand.blue} /> AIRIN AI · PT Lemorax
             </div>
           </div>
         </div>

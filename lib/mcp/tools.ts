@@ -42,7 +42,7 @@ export const mcpTools: McpTool[] = [
     handler: async (args) => {
       const parsed = queryBusinessDataInput.safeParse(args ?? EMPTY_ARGS);
       if (!parsed.success) return errorResult(parsed.error.message);
-      const result = await runBusinessQuery(parsed.data.sql_query, parsed.data.explanation ? "mcp-aries" : "mcp");
+      const result = await runBusinessQuery(parsed.data.sql_query, parsed.data.explanation ? "mcp-airin" : "mcp");
       return jsonToolResult(result, !result.ok);
     },
   },

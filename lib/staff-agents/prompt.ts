@@ -1,5 +1,5 @@
 import type { StaffAgent, StaffMessage } from "@/lib/staff-agents/types";
-import { ARIES_SYSTEM_PROMPT } from "@/lib/openrouter";
+import { AIRIN_SYSTEM_PROMPT } from "@/lib/openrouter";
 import { buildTeamRoster, getDisplayName, PRINCIPAL_NAME } from "@/lib/staff-agents/names";
 
 export function buildStaffAgentSystemPrompt(
@@ -36,7 +36,7 @@ export function buildStaffAgentSystemPrompt(
     ? `\n${extras.vaultContext}\n\n**Aturan Company Vault:** Jawab dengan fakta dari kutipan di atas jika relevan. Sebut sumber dengan [[wikilink]]. Jika vault tidak mencakup topik, katakan dengan jujur lalu gunakan data/SQL lain.`
     : "\n\n(Company Vault kosong — belum ada dokumen internal terindeks.)";
 
-  return `${ARIES_SYSTEM_PROMPT}
+  return `${AIRIN_SYSTEM_PROMPT}
 
 ---
 

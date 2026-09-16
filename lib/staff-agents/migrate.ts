@@ -3,7 +3,7 @@ import { EXECUTIVE_ASSISTANT_ID, MAIN_GROUP_ID } from "@/lib/staff-agents/names"
 import { PRINCIPAL_NAME } from "@/lib/brand";
 
 const DISPLAY_NAMES: Record<string, string> = {
-  "aries-analyst": "Arin",
+  "airin-analyst": "Arin",
   "finance-guardian": "Fania",
   "marketing-pulse": "Marta",
   "hr-companion": "Heru",

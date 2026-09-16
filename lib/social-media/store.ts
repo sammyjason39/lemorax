@@ -1,5 +1,5 @@
 import { createServerSupabaseClient } from "@/lib/supabase";
-import type { ApifyInstagramProfile } from "@/lib/apify/instagram";
+import type { ApifyInstagramProfile, ApifyInstagramPost } from "@/lib/apify/instagram";
 import { persistRemoteMediaOnce } from "@/lib/social-media/media-store";
 import { configureInstagramFetch } from "@/lib/social-media/fetch";
 
@@ -366,4 +366,19 @@ export async function upsertFromApifyProfile(raw: ApifyInstagramProfile): Promis
   }
 
   return { profileId: id, postsUpserted };
+}
+
+/**
+ * Deep backfill using apify/instagram-scraper (supports resultsLimit up to
+ * ~200 via directUrls). The profile-scraper actor is hard-capped at 12 posts.
+ * Posts are upserted through the same pipeline so media archiving applies.
+ */
+export async function upsertFromApifyPosts(
+  username: string,
+  posts: ApifyInstagramPost[]
+): Promise<{ profileId: string; postsUpserted: number }> {
+  return upsertFromApifyProfile({
+    username,
+    latestPosts: posts,
+  });
 }

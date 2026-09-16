@@ -1,5 +1,5 @@
 import { Sidebar } from "@/components/layout/Sidebar";
-import { AriesChatModal } from "@/components/ui/AriesChatModal";
+import { AirinChatModal } from "@/components/ui/AirinChatModal";
 
 export default function DashboardLayout({
   children,
@@ -12,7 +12,7 @@ export default function DashboardLayout({
       <main className="flex-1 ml-[260px] min-h-screen">
         <div className="max-w-[1600px] mx-auto">{children}</div>
       </main>
-      <AriesChatModal />
+      <AirinChatModal />
     </div>
   );
 }

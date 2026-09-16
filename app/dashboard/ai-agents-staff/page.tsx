@@ -1,7 +1,7 @@
 import { StaffAgentsApp } from "@/components/staff-agents/StaffAgentsApp";
 
 export const metadata = {
-  title: "AI Agents Staff · ARIES",
+  title: "AI Agents Staff · AIRIN",
   description: "Multi-agent WhatsApp-style workspace for Lemorax",
 };
 

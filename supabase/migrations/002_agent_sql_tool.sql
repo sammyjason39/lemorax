@@ -1,4 +1,4 @@
--- Safe read-only query executor + audit log for ARIES SQL tool (MCP + agent)
+-- Safe read-only query executor + audit log for AIRIN SQL tool (MCP + agent)
 
 CREATE TABLE IF NOT EXISTS agent_query_log (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

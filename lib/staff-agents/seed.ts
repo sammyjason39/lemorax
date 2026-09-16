@@ -48,15 +48,15 @@ export const SEED_AGENTS: StaffAgent[] = [
     updatedAt: new Date().toISOString(),
   },
   {
-    id: "aries-analyst",
-    name: "ARIES Analyst",
+    id: "airin-analyst",
+    name: "AIRIN Analyst",
     displayName: "Arin",
     role: "Chief Data Analyst",
     description: "Analisa bisnis, SQL, KPI, revenue, dan trend operasional.",
     avatarColor: "#1652F0",
     emoji: "📊",
     soulMd: DEFAULT_SOUL(
-      "ARIES Analyst",
+      "AIRIN Analyst",
       `Chief Data Analyst untuk ${PRINCIPAL_NAME} Lemorax`,
       "Analytical, presisi angka, suka visualisasi insight. Selalu sertakan angka konkret dan interpretasi bisnis."
     ),

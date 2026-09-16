@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { scrapeInstagramProfiles, scrapeInstagramProfilesWithPoll } from "@/lib/apify/instagram";
-import { getDashboardData, upsertFromApifyProfile } from "@/lib/social-media/store";
+import { scrapeInstagramProfiles, scrapeInstagramProfilesWithPoll, scrapeInstagramPostsDeep } from "@/lib/apify/instagram";
+import { getDashboardData, upsertFromApifyProfile, upsertFromApifyPosts } from "@/lib/social-media/store";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,32 +16,59 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "usernames required" }, { status: 400 });
     }
 
-    let profiles;
-    try {
-      profiles = await scrapeInstagramProfiles(usernames, {
-        includeAboutSection: body.includeAboutSection ?? false,
-      });
-    } catch {
-      profiles = await scrapeInstagramProfilesWithPoll(usernames, {
-        includeAboutSection: body.includeAboutSection ?? false,
-      });
-    }
+    // deep=true backfills up to `limit` posts (default 48, hard cap 48) via
+    // apify/instagram-scraper. Normal sync stays on the 12-post profile actor.
+    const deep = body.deep === true;
+    const limit = Math.min(Math.max(Number(body.limit) || 48, 12), 48);
 
     const results: Array<{
       username?: string;
-      profileId: string;
-      postsUpserted: number;
-      followers: number;
+      profileId?: string;
+      postsUpserted?: number;
+      followers?: number;
       displayName?: string;
+      mode?: string;
     }> = [];
-    for (const profile of profiles) {
-      const result = await upsertFromApifyProfile(profile);
-      results.push({
-        username: profile.username,
-        displayName: profile.fullName,
-        followers: Number(profile.followersCount) || 0,
-        ...result,
-      });
+
+    for (const username of usernames) {
+      if (deep) {
+        try {
+          const posts = await scrapeInstagramPostsDeep(username, limit);
+          const result = await upsertFromApifyPosts(username, posts);
+          results.push({
+            username,
+            displayName: username,
+            ...result,
+            mode: "deep",
+          });
+          continue;
+        } catch (deepErr) {
+          // Deep backfill failed — fall through to the regular profile sync
+          console.error("deep sync failed, falling back:", deepErr instanceof Error ? deepErr.message : deepErr);
+        }
+      }
+
+      let profiles;
+      try {
+        profiles = await scrapeInstagramProfiles([username], {
+          includeAboutSection: body.includeAboutSection ?? false,
+        });
+      } catch {
+        profiles = await scrapeInstagramProfilesWithPoll(usernames, {
+          includeAboutSection: body.includeAboutSection ?? false,
+        });
+      }
+
+      for (const profile of profiles) {
+        const result = await upsertFromApifyProfile(profile);
+        results.push({
+          username: profile.username,
+          displayName: profile.fullName,
+          followers: Number(profile.followersCount) || 0,
+          ...result,
+          mode: deep ? "deep-fallback-profile" : "profile",
+        });
+      }
     }
 
     const dashboard = await getDashboardData();

@@ -27,7 +27,7 @@ Tambahkan secrets berikut:
 | `QWEN_MODEL` | `qwen3.7-plus` |
 | `COMPOSIO_API_KEY` | `ak_...` |
 | `COMPOSIO_USER_ID` | `lemorax-pak-anjas` |
-| `ARIES_MCP_TOKEN` | `...` |
+| `AIRIN_MCP_TOKEN` | `...` |
 
 ## Trigger manual
 
