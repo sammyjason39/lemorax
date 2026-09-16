@@ -39,11 +39,3 @@ export type AgentChatEvent =
     }
   | { type: "error"; message: string }
   | { type: "done"; output?: unknown };
-
-/** @deprecated OpenClaw types — kept for legacy imports */
-export type OpenClawChatInput = AgentChatInput & { context?: Record<string, unknown> };
-export type OpenClawChatEvent = AgentChatEvent;
-
-export interface OpenClawClient {
-  chat(input: OpenClawChatInput): AsyncGenerator<AgentChatEvent>;
-}

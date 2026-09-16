@@ -4,7 +4,7 @@ import { queryBusinessData } from "@/lib/agents/query-business-data";
 export const runtime = "nodejs";
 
 function getToolSecret(): string | undefined {
-  return process.env.ARIES_TOOL_SECRET || process.env.OPENCLAW_GATEWAY_TOKEN;
+  return process.env.ARIES_TOOL_SECRET || process.env.ARIES_MCP_TOKEN;
 }
 
 function isAuthorized(req: NextRequest): boolean {
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const sql_query = typeof body.sql_query === "string" ? body.sql_query.trim() : "";
     const explanation = typeof body.explanation === "string" ? body.explanation : undefined;
-    const source = typeof body.source === "string" ? body.source : "openclaw-tool";
+    const source = typeof body.source === "string" ? body.source : "mcp-tool";
 
     if (!sql_query) {
       return Response.json({ ok: false, error: "sql_query is required" }, { status: 400 });

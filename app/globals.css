@@ -4,36 +4,36 @@
 
 @layer base {
   :root {
-    --ink: #0a0a0a;
-    --slate: #1e293b;
-    --accent-blue: #1652f0;
-    --blue-soft: #dce5fe;
-    --bg-primary: #ffffff;
-    --bg-secondary: #f8fafc;
+    --ink: #172033;
+    --slate: #4b556b;
+    --accent-blue: #2784e8;
+    --blue-soft: #e6f2ff;
+    --bg-primary: #f8fafc;
+    --bg-secondary: #ffffff;
     --bg-tertiary: #f1f5f9;
-    --border: #e5e7eb;
-    --text-primary: #0a0a0a;
-    --text-secondary: #6b7280;
-    --text-muted: #9ca3af;
+    --border: #e2e8f0;
+    --text-primary: #172033;
+    --text-secondary: #64748b;
+    --text-muted: #94a3b8;
 
-    --background: 0 0% 100%;
-    --foreground: 0 0% 4%;
-    --card: 210 40% 98%;
-    --card-foreground: 0 0% 4%;
+    --background: 210 40% 98%;
+    --foreground: 222 38% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 38% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 4%;
-    --primary: 224 88% 52%;
+    --popover-foreground: 222 38% 15%;
+    --primary: 207 81% 53%;
     --primary-foreground: 0 0% 100%;
     --secondary: 210 40% 96%;
-    --secondary-foreground: 0 0% 4%;
+    --secondary-foreground: 222 38% 15%;
     --muted: 210 40% 96%;
-    --muted-foreground: 220 9% 46%;
-    --accent: 224 88% 52%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 247 74% 63%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
+    --destructive: 0 69% 60%;
     --destructive-foreground: 0 0% 100%;
-    --ring: 224 88% 52%;
-    --radius: 1rem;
+    --ring: 207 81% 53%;
+    --radius: 0.875rem;
   }
 
   .dark {
@@ -115,7 +115,8 @@
     background-color: var(--bg-secondary);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    transition: all 200ms ease;
+    box-shadow: 0 10px 30px -26px rgba(15, 23, 42, 0.28);
+    transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
   }
 
   .card-hover {
@@ -123,8 +124,9 @@
   }
 
   .card-hover:hover {
-    border-color: rgba(22, 82, 240, 0.25);
-    box-shadow: 0 16px 50px -20px rgba(10, 10, 10, 0.12);
+    border-color: rgba(39, 132, 232, 0.28);
+    box-shadow: 0 20px 45px -28px rgba(12, 74, 158, 0.38);
+    transform: translateY(-1px);
   }
 
   .sidebar-item {
@@ -149,14 +151,15 @@
   .sidebar-item.active {
     background-color: var(--blue-soft);
     color: var(--accent-blue);
-    border: 1px solid rgba(22, 82, 240, 0.2);
+    border: 1px solid rgba(39, 132, 232, 0.18);
+    box-shadow: inset 3px 0 0 var(--accent-blue);
     font-weight: 600;
   }
 
   .dark .sidebar-item.active {
-    background-color: rgba(22, 82, 240, 0.12);
-    color: #93b4fd;
-    border-color: rgba(22, 82, 240, 0.25);
+    background-color: rgba(108, 92, 231, 0.16);
+    color: #c5bfff;
+    border-color: rgba(147, 132, 255, 0.28);
   }
 
   .badge {

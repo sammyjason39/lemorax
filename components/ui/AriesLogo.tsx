@@ -27,7 +27,8 @@ export function AriesLogo({
           width: s.mark,
           height: s.mark,
           borderRadius: size === "sm" ? 8 : 10,
-          background: brand.blue,
+          background: `linear-gradient(145deg, ${brand.blue}, #1652F0)`,
+          boxShadow: "0 8px 20px -10px rgba(39, 132, 232, 0.75)",
           fontSize: size === "sm" ? 14 : size === "md" ? 17 : 22,
           letterSpacing: "-0.03em",
         }}

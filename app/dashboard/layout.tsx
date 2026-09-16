@@ -1,5 +1,5 @@
 import { Sidebar } from "@/components/layout/Sidebar";
-import { OpenclawChatModal } from "@/components/ui/OpenclawChatModal";
+import { AriesChatModal } from "@/components/ui/AriesChatModal";
 
 export default function DashboardLayout({
   children,
@@ -12,7 +12,7 @@ export default function DashboardLayout({
       <main className="flex-1 ml-[260px] min-h-screen">
         <div className="max-w-[1600px] mx-auto">{children}</div>
       </main>
-      <OpenclawChatModal />
+      <AriesChatModal />
     </div>
   );
 }

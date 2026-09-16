@@ -39,7 +39,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       <p className="font-semibold mb-1" style={{ color: "var(--text-primary)" }}>
         {label}
       </p>
-      <p style={{ color: brand.blue }}>{formatRupiahShort(payload[0]?.value)}</p>
+      <p style={{ color: brand.violet }}>{formatRupiahShort(payload[0]?.value)}</p>
     </div>
   );
 };

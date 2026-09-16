@@ -11,7 +11,7 @@ import { BranchBarChart } from "@/components/charts/BranchBarChart";
 import { AriesPieChart } from "@/components/charts/PieChart";
 import { formatRupiahShort, formatPct, getInitials, calcDelta } from "@/lib/formatters";
 import { formatPeriodeFilter } from "@/lib/periode";
-import { brand, getCategoricalColor } from "@/lib/brand";
+import { brand, domain, CRM_STATUS_COLORS, KPI_STATUS_COLORS, getCategoricalColor } from "@/lib/brand";
 import { TrendingUp, DollarSign, Activity, Users, Target, Handshake, AlertTriangle } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -36,8 +36,10 @@ export default function OverviewPage() {
       delta: data ? calcDelta(data.revenue, data.revenuePrev) : undefined,
       deltaLabel: t("dash.vs_last_month"),
       sparklineData: data?.revenueSparkline,
-      sparklineColor: brand.blue,
-      icon: <TrendingUp size={16} color={brand.blue} />,
+      sparklineColor: domain.sales,
+      accentColor: domain.sales,
+      accentSoft: brand.violetSoft,
+      icon: <TrendingUp size={17} />,
     },
     {
       title: t("dash.expense"),
@@ -45,47 +47,59 @@ export default function OverviewPage() {
       delta: data ? -calcDelta(data.expense, data.expensePrev) : undefined,
       deltaLabel: t("dash.vs_last_month"),
       sparklineData: data?.expenseSparkline,
-      sparklineColor: brand.muted2,
-      icon: <DollarSign size={16} color={brand.muted2} />,
+      sparklineColor: brand.tangerine,
+      accentColor: brand.tangerine,
+      accentSoft: brand.tangerineSoft,
+      icon: <DollarSign size={17} />,
     },
     {
       title: t("dash.profit"),
       value: data ? formatRupiahShort(data.netProfit) : "—",
       delta: data ? calcDelta(data.netProfit, data.netProfitPrev) : undefined,
       deltaLabel: t("dash.vs_last_month"),
-      icon: <Activity size={16} color={brand.slate} />,
+      accentColor: domain.finance,
+      accentSoft: brand.emeraldSoft,
+      icon: <Activity size={17} />,
     },
     {
       title: t("dash.transactions"),
       value: data ? data.totalTransactions.toLocaleString("id-ID") : "—",
       delta: data ? calcDelta(data.totalTransactions, data.totalTransactionsPrev) : undefined,
       deltaLabel: t("dash.vs_last_month"),
-      icon: <Users size={16} color={brand.muted} />,
+      accentColor: domain.people,
+      accentSoft: brand.roseSoft,
+      icon: <Users size={17} />,
     },
     {
       title: t("dash.kpi"),
       value: data ? formatPct(data.kpiAchievement) : "—",
       delta: data ? calcDelta(data.kpiAchievement, data.kpiAchievementPrev) : undefined,
       deltaLabel: t("dash.vs_last_month"),
-      icon: <Target size={16} color={brand.muted} />,
+      accentColor: domain.marketing,
+      accentSoft: brand.tealSoft,
+      icon: <Target size={17} />,
     },
     {
       title: t("dash.deals"),
       value: data ? data.activeDeals.toString() : "—",
       delta: data ? calcDelta(data.activeDeals, data.activeDealsPrev) : undefined,
       deltaLabel: t("dash.vs_last_month"),
-      icon: <Handshake size={16} color={brand.blue} />,
+      accentColor: domain.crm,
+      accentSoft: brand.tangerineSoft,
+      icon: <Handshake size={17} />,
     },
   ];
 
   const pipelineChartData = (data?.pipelineDistribution || []).map((p: any) => ({
     name: p.status,
     value: p.count,
+    color: CRM_STATUS_COLORS[p.status],
   }));
 
   const kpiChartData = (data?.kpiDistribution || []).map((k: any) => ({
     name: k.status,
     value: k.count,
+    color: KPI_STATUS_COLORS[k.status],
   }));
 
   return (

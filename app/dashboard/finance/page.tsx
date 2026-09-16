@@ -11,7 +11,10 @@ import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, Legend, Cell, ReferenceLine
 } from "recharts";
-import { CHART_PRIMARY, CHART_SECONDARY, CHART_MUTED, CHART_AXIS, CHART_GRID } from "@/lib/brand";
+import { brand, domain, CHART_MUTED, CHART_AXIS, CHART_GRID } from "@/lib/brand";
+
+const FINANCE_POSITIVE = domain.finance;
+const FINANCE_EXPENSE = brand.tangerine;
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -53,8 +56,8 @@ export default function FinancePage() {
       key: "tipe", label: "Tipe",
       render: (r: any) => (
         <span className="badge" style={{
-          background: r.tipe === "Pemasukan" ? "rgba(22,82,240,0.12)" : "rgba(148,163,184,0.2)",
-          color: r.tipe === "Pemasukan" ? CHART_PRIMARY : CHART_SECONDARY,
+          background: r.tipe === "Pemasukan" ? brand.emeraldSoft : brand.tangerineSoft,
+          color: r.tipe === "Pemasukan" ? FINANCE_POSITIVE : FINANCE_EXPENSE,
           borderColor: "transparent"
         }}>{r.tipe}</span>
       )
@@ -64,7 +67,7 @@ export default function FinancePage() {
     {
       key: "jumlah", label: "Jumlah", sortable: true, align: "right" as const,
       render: (r: any) => (
-        <span style={{ color: r.tipe === "Pemasukan" ? CHART_PRIMARY : CHART_SECONDARY }}>
+        <span style={{ color: r.tipe === "Pemasukan" ? FINANCE_POSITIVE : FINANCE_EXPENSE }}>
           {r.tipe === "Pemasukan" ? "+" : "-"}{formatRupiah(r.jumlah)}
         </span>
       )
@@ -91,10 +94,10 @@ export default function FinancePage() {
               <AreaChart data={data?.monthlyPL || []} margin={{ top: 5, right: 20, left: 10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gRev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={CHART_PRIMARY} stopOpacity={0.2} /><stop offset="95%" stopColor={CHART_PRIMARY} stopOpacity={0} />
+                    <stop offset="5%" stopColor={FINANCE_POSITIVE} stopOpacity={0.2} /><stop offset="95%" stopColor={FINANCE_POSITIVE} stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="gExp" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={CHART_SECONDARY} stopOpacity={0.2} /><stop offset="95%" stopColor={CHART_SECONDARY} stopOpacity={0} />
+                    <stop offset="5%" stopColor={FINANCE_EXPENSE} stopOpacity={0.18} /><stop offset="95%" stopColor={FINANCE_EXPENSE} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} vertical={false} />
@@ -102,8 +105,8 @@ export default function FinancePage() {
                 <YAxis tickFormatter={formatRupiahShort} tick={{ fill: CHART_AXIS, fontSize: 11 }} axisLine={false} tickLine={false} width={72} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend wrapperStyle={{ fontSize: "12px", color: CHART_MUTED }} />
-                <Area type="monotone" dataKey="revenue" name="Pemasukan" stroke={CHART_PRIMARY} strokeWidth={2} fill="url(#gRev)" />
-                <Area type="monotone" dataKey="expense" name="Pengeluaran" stroke={CHART_SECONDARY} strokeWidth={2} strokeDasharray="4 3" fill="url(#gExp)" />
+                <Area type="monotone" dataKey="revenue" name="Pemasukan" stroke={FINANCE_POSITIVE} strokeWidth={2} fill="url(#gRev)" />
+                <Area type="monotone" dataKey="expense" name="Pengeluaran" stroke={FINANCE_EXPENSE} strokeWidth={2} strokeDasharray="4 3" fill="url(#gExp)" />
               </AreaChart>
             </ResponsiveContainer>
           )}
@@ -133,7 +136,7 @@ export default function FinancePage() {
                   <ReferenceLine y={0} stroke={CHART_GRID} />
                   <Bar dataKey="net" name="Net Profit" radius={[4,4,0,0]} maxBarSize={32}>
                     {(data?.monthlyPL || []).map((row: any, i: number) => (
-                      <Cell key={i} fill={row.net >= 0 ? CHART_PRIMARY : CHART_SECONDARY} fillOpacity={row.net >= 0 ? 0.9 : 0.75} />
+                      <Cell key={i} fill={row.net >= 0 ? FINANCE_POSITIVE : brand.danger} fillOpacity={0.9} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -150,10 +153,10 @@ export default function FinancePage() {
                 Ringkasan {y.year}
               </p>
               {[
-                ["Total Revenue", formatRupiahShort(y.revenue || 0), CHART_PRIMARY],
-                ["Total Expense", formatRupiahShort(y.expense || 0), CHART_SECONDARY],
-                ["Net Profit", formatRupiahShort(y.net || 0), (y.net || 0) >= 0 ? CHART_PRIMARY : CHART_SECONDARY],
-                ["Margin", formatPct(y.margin || 0), CHART_PRIMARY],
+                ["Total Revenue", formatRupiahShort(y.revenue || 0), FINANCE_POSITIVE],
+                ["Total Expense", formatRupiahShort(y.expense || 0), FINANCE_EXPENSE],
+                ["Net Profit", formatRupiahShort(y.net || 0), (y.net || 0) >= 0 ? FINANCE_POSITIVE : brand.danger],
+                ["Margin", formatPct(y.margin || 0), FINANCE_POSITIVE],
               ].map(([label, value, color], j) => (
                 <div key={j} className="flex justify-between py-1.5 text-xs border-b last:border-0" style={{ borderColor: "var(--border)" }}>
                   <span style={{ color: "var(--text-muted)" }}>{label}</span>

@@ -315,7 +315,7 @@ export default function AIAnalystPage() {
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantId
-            ? { ...m, isThinking: false, content: `❌ **Error:** ${e.message}\n\nPastikan OpenClaw gateway berjalan dan env OPENCLAW_* sudah dikonfigurasi.` }
+            ? { ...m, isThinking: false, content: `❌ **Error:** ${e.message}\n\nPastikan ARIES agent aktif dan env OPENROUTER_API_KEY sudah dikonfigurasi.` }
             : m
         )
       );

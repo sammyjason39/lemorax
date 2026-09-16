@@ -12,7 +12,7 @@ import {
   AreaChart, Area, Cell, LabelList
 } from "recharts";
 import { formatPeriode } from "@/lib/formatters";
-import { CHART_PRIMARY, CHART_SECONDARY, CHART_AXIS, CHART_GRID, ATTENDANCE_COLORS, getKehadiranBarColor } from "@/lib/brand";
+import { brand, domain, CHART_AXIS, CHART_GRID, ATTENDANCE_COLORS, getKehadiranBarColor } from "@/lib/brand";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -50,7 +50,7 @@ export default function HRPage() {
     {
       key: "kehadiran_pct", label: "Kehadiran %", sortable: true, align: "right" as const,
       render: (r: any) => (
-        <span style={{ color: (r.kehadiran_pct || 0) >= 90 ? CHART_PRIMARY : (r.kehadiran_pct || 0) >= 75 ? CHART_SECONDARY : CHART_AXIS }}>
+        <span style={{ color: (r.kehadiran_pct || 0) >= 90 ? brand.emerald : (r.kehadiran_pct || 0) >= 75 ? brand.amber : brand.danger }}>
           {formatPct(r.kehadiran_pct)}
         </span>
       )
@@ -169,7 +169,7 @@ export default function HRPage() {
             searchable
             searchKeys={["nama", "cabang", "jabatan"]}
             pageSize={25}
-            getRowStyle={(r) => (r.kehadiran_pct || 0) < 75 ? { background: "rgba(148,163,184,0.08)" } : {}}
+            getRowStyle={(r) => (r.kehadiran_pct || 0) < 75 ? { background: brand.dangerSoft } : {}}
           />
         </div>
       </div>

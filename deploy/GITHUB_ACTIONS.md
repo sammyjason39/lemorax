@@ -27,10 +27,7 @@ Tambahkan secrets berikut:
 | `QWEN_MODEL` | `qwen3.7-plus` |
 | `COMPOSIO_API_KEY` | `ak_...` |
 | `COMPOSIO_USER_ID` | `lemorax-pak-anjas` |
-| `OPENCLAW_GATEWAY_URL` | `ws://127.0.0.1:18789` |
-| `OPENCLAW_GATEWAY_TOKEN` | `...` |
-| `OPENCLAW_INTEGRATION_MODE` | `ws` |
-| `OPENCLAW_DEFAULT_AGENT` | `main` |
+| `ARIES_MCP_TOKEN` | `...` |
 
 ## Trigger manual
 

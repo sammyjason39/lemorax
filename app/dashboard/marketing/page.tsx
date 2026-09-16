@@ -10,7 +10,10 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, Cell, ScatterChart, Scatter, ZAxis, ReferenceLine
 } from "recharts";
-import { CHART_PRIMARY, CHART_SECONDARY, CHART_AXIS, CHART_GRID, CHART_MUTED, getCategoricalColor, buildRankColorMap } from "@/lib/brand";
+import { brand, domain, CHART_AXIS, CHART_GRID, CHART_MUTED, getCategoricalColor, buildRankColorMap } from "@/lib/brand";
+
+const MARKETING_PRIMARY = domain.marketing;
+const MARKETING_SPEND = brand.tangerine;
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -55,10 +58,10 @@ export default function MarketingPage() {
     { key: "clicks", label: "Clicks", align: "right" as const, sortable: true },
     { key: "ctr_pct", label: "CTR%", align: "right" as const, sortable: true, render: (r: any) => formatPct(r.ctr_pct) },
     { key: "conversions", label: "Conv.", align: "right" as const, sortable: true },
-    { key: "revenue_generated", label: "Revenue", align: "right" as const, sortable: true, render: (r: any) => <span style={{ color: "#1652F0",  }}>{formatRupiahShort(r.revenue_generated)}</span> },
+    { key: "revenue_generated", label: "Revenue", align: "right" as const, sortable: true, render: (r: any) => <span style={{ color: MARKETING_PRIMARY }}>{formatRupiahShort(r.revenue_generated)}</span> },
     {
       key: "roas", label: "ROAS", align: "right" as const, sortable: true,
-      render: (r: any) => <span style={{ color: (r.roas || 0) >= 3 ? CHART_PRIMARY : CHART_SECONDARY }}>{(r.roas || 0).toFixed(2)}x</span>
+      render: (r: any) => <span style={{ color: (r.roas || 0) >= 3 ? brand.emerald : (r.roas || 0) >= 1 ? brand.amber : brand.danger }}>{(r.roas || 0).toFixed(2)}x</span>
     },
     { key: "cpl", label: "CPL", align: "right" as const, sortable: true, render: (r: any) => formatRupiahShort(r.cpl) },
   ];
@@ -83,7 +86,7 @@ export default function MarketingPage() {
                   <XAxis type="number" tick={{ fill: CHART_AXIS, fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis type="category" dataKey="channel" tick={{ fill: CHART_MUTED, fontSize: 11 }} axisLine={false} tickLine={false} width={100} />
                   <Tooltip formatter={(v: any) => [`${Number(v).toFixed(2)}x`, "ROAS"]} contentStyle={{ background: "var(--bg-tertiary)", border: "1px solid var(--border)" }} />
-                  <ReferenceLine x={3} stroke={CHART_SECONDARY} strokeDasharray="4 2" label={{ value: "Breakeven", fill: CHART_AXIS, fontSize: 10 }} />
+                  <ReferenceLine x={3} stroke={brand.amber} strokeDasharray="4 2" label={{ value: "Breakeven", fill: CHART_AXIS, fontSize: 10 }} />
                   <Bar dataKey="roas" radius={[0,4,4,0]} maxBarSize={20}>
                     {roasPerChannel.map((_: any, i: number) => (
                       <Cell key={i} fill={getCategoricalColor(i, roasPerChannel.length)} fillOpacity={0.92} />
@@ -107,9 +110,9 @@ export default function MarketingPage() {
                   <YAxis tickFormatter={formatRupiahShort} tick={{ fill: CHART_AXIS, fontSize: 10 }} axisLine={false} tickLine={false} width={68} />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend wrapperStyle={{ fontSize: "11px", color: CHART_MUTED }} />
-                  <Bar dataKey="budget" name="Budget" fill={CHART_SECONDARY} fillOpacity={0.5} radius={[2,2,0,0]} maxBarSize={14} />
-                  <Bar dataKey="spend" name="Spend" fill={CHART_PRIMARY} fillOpacity={0.7} radius={[2,2,0,0]} maxBarSize={14} />
-                  <Bar dataKey="revenue" name="Revenue" fill={CHART_PRIMARY} fillOpacity={0.95} radius={[2,2,0,0]} maxBarSize={14} />
+                  <Bar dataKey="budget" name="Budget" fill={brand.muted2} fillOpacity={0.5} radius={[2,2,0,0]} maxBarSize={14} />
+                  <Bar dataKey="spend" name="Spend" fill={MARKETING_SPEND} fillOpacity={0.75} radius={[2,2,0,0]} maxBarSize={14} />
+                  <Bar dataKey="revenue" name="Revenue" fill={MARKETING_PRIMARY} fillOpacity={0.95} radius={[2,2,0,0]} maxBarSize={14} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -135,15 +138,15 @@ export default function MarketingPage() {
                     <div className="rounded-lg p-3 text-xs" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border)" }}>
                       <p className="font-semibold mb-1" style={{ color: "var(--text-primary)" }}>{d.campaign}</p>
                       <p style={{ color: "#94A3B8" }}>Spend: {formatRupiahShort(d.spend)}</p>
-                      <p style={{ color: "#1652F0" }}>ROAS: {(d.roas || 0).toFixed(2)}x</p>
-                      <p style={{ color: "#1652F0" }}>Revenue: {formatRupiahShort(d.revenue)}</p>
+                      <p style={{ color: MARKETING_PRIMARY }}>ROAS: {(d.roas || 0).toFixed(2)}x</p>
+                      <p style={{ color: MARKETING_PRIMARY }}>Revenue: {formatRupiahShort(d.revenue)}</p>
                     </div>
                   );
                 }} />
-                <ReferenceLine y={3} stroke={CHART_SECONDARY} strokeDasharray="4 2" />
-                <Scatter data={data?.scatterData || []} fill={CHART_PRIMARY} fillOpacity={0.7}>
+                <ReferenceLine y={3} stroke={brand.amber} strokeDasharray="4 2" />
+                <Scatter data={data?.scatterData || []} fill={MARKETING_PRIMARY} fillOpacity={0.7}>
                   {(data?.scatterData || []).map((d: any, i: number) => (
-                    <Cell key={i} fill={channelColorMap[d.channel] || CHART_SECONDARY} fillOpacity={0.82} />
+                    <Cell key={i} fill={channelColorMap[d.channel] || MARKETING_PRIMARY} fillOpacity={0.82} />
                   ))}
                 </Scatter>
               </ScatterChart>

@@ -13,7 +13,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, Cell
 } from "recharts";
 import { formatPeriode } from "@/lib/formatters";
-import { CHART_PRIMARY, getCategoricalColor } from "@/lib/brand";
+import { brand, domain, CRM_STATUS_COLORS, getCategoricalColor } from "@/lib/brand";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -35,13 +35,13 @@ export default function CRMPage() {
     { title: "Avg Deal Value", value: data ? formatRupiahShort(data.summary?.avgDeal) : "—" },
   ];
 
-  const tipeChartData = (data?.tipeBreakdown || []).map((t: any) => ({ name: t.name, value: t.value }));
+  const tipeChartData = (data?.tipeBreakdown || []).map((t: any, i: number) => ({ name: t.name, value: t.value, color: i === 0 ? domain.crm : brand.violet }));
 
   const funnelStages = data?.funnelData || [];
   const funnelRanked = [...funnelStages].sort((a: any, b: any) => (b.value || 0) - (a.value || 0));
   const funnelColorByStage: Record<string, string> = {};
   funnelRanked.forEach((f: any, i: number) => {
-    funnelColorByStage[f.stage] = getCategoricalColor(i, funnelRanked.length);
+    funnelColorByStage[f.stage] = CRM_STATUS_COLORS[f.stage] || getCategoricalColor(i, funnelRanked.length);
   });
 
   const twoWeeksAgo = new Date();
@@ -55,7 +55,7 @@ export default function CRMPage() {
     { key: "account_manager", label: "AM" },
     {
       key: "nilai_deal", label: "Nilai Deal", sortable: true, align: "right" as const,
-      render: (r: any) => <span style={{ color: "#1652F0" }}>{formatRupiahShort(r.nilai_deal)}</span>
+      render: (r: any) => <span style={{ color: domain.crm }}>{formatRupiahShort(r.nilai_deal)}</span>
     },
     {
       key: "status", label: "Status",
@@ -90,7 +90,7 @@ export default function CRMPage() {
                         <span style={{ color: "var(--text-muted)" }}>{f.count} deals · {formatRupiahShort(f.value)}</span>
                       </div>
                       <div className="h-7 rounded-lg overflow-hidden" style={{ background: "var(--bg-tertiary)" }}>
-                        <div className="h-full rounded-lg transition-all" style={{ width: `${pct}%`, background: funnelColorByStage[f.stage] || CHART_PRIMARY, opacity: 0.92 }} />
+                        <div className="h-full rounded-lg transition-all" style={{ width: `${pct}%`, background: funnelColorByStage[f.stage] || domain.crm, opacity: 0.92 }} />
                       </div>
                     </div>
                   );
@@ -112,9 +112,9 @@ export default function CRMPage() {
               <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-thin">
                 {(data?.topAMs || []).slice(0, 8).map((am: any, i: number) => (
                   <div key={i} className="flex items-center gap-2 text-xs">
-                    <span className="w-5 font-bold text-center" style={{ color: i < 3 ? CHART_PRIMARY : "var(--text-muted)" }}>#{i+1}</span>
+                    <span className="w-5 font-bold text-center" style={{ color: i < 3 ? domain.crm : "var(--text-muted)" }}>#{i+1}</span>
                     <span className="flex-1 truncate" style={{ color: "var(--text-secondary)" }}>{am.am}</span>
-                    <span style={{ color: "#1652F0",  }}>{formatRupiahShort(am.value)}</span>
+                    <span style={{ color: domain.crm }}>{formatRupiahShort(am.value)}</span>
                   </div>
                 ))}
               </div>
@@ -136,7 +136,7 @@ export default function CRMPage() {
                 <div key={i} className="p-3 rounded-xl text-xs" style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)" }}>
                   <p className="font-semibold mb-1" style={{ color: "var(--text-primary)" }}>{d.nama_perusahaan}</p>
                   <p style={{ color: "var(--text-secondary)" }}>AM: {d.account_manager}</p>
-                  <p style={{ color: "#1652F0" }}>Nilai: {formatRupiahShort(d.nilai_deal)}</p>
+                  <p style={{ color: domain.crm }}>Nilai: {formatRupiahShort(d.nilai_deal)}</p>
                   <p style={{ color: "#F59E0B" }}>Last FU: {d.last_follow_up?.slice(0,10) || "—"}</p>
                 </div>
               ))}

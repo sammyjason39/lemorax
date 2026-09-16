@@ -95,8 +95,9 @@ export function Sidebar() {
     <aside
       className="fixed left-0 top-0 h-screen w-[260px] flex flex-col z-40"
       style={{
-        backgroundColor: "var(--bg-primary)",
+        backgroundColor: "var(--bg-secondary)",
         borderRight: "1px solid var(--border)",
+        boxShadow: "10px 0 40px -34px rgba(15, 23, 42, 0.35)",
       }}
     >
       {/* Logo */}

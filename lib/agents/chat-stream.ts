@@ -8,11 +8,6 @@ export function getAgentSessionId(): string {
   return DEFAULT_SESSION_ID;
 }
 
-/** @deprecated use getAgentSessionId */
-export function getOrCreateOpenClawSessionId(): string {
-  return getAgentSessionId();
-}
-
 export type AgentChatStreamEvent =
   | {
       type: "meta";

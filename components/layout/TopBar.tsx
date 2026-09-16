@@ -57,7 +57,7 @@ export function TopBar({ title, subtitle }: TopBarProps) {
             className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium"
             style={{
               background: brand.blueSoft,
-              border: "1px solid rgba(22, 82, 240, 0.15)",
+              border: "1px solid rgba(39, 132, 232, 0.16)",
               color: brand.blue,
             }}
           >

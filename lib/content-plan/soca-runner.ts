@@ -1,7 +1,7 @@
 import type { ContentPlanToolName } from "@/lib/content-plan/tools";
 import { executeContentPlanTool } from "@/lib/content-plan/tools";
 import { getContentPlanContextForAgent } from "@/lib/content-plan/store";
-import { getSocialContextForAgent } from "@/lib/social-media/store";
+import { getSocialPerformanceContext } from "@/lib/social-media/store";
 import { completeChatCompletion } from "@/lib/ai/chat-provider";
 
 const TOOLS_PROMPT = `Kamu adalah Soca, social media strategist. Eksekusi tool content plan jika diminta.
@@ -32,7 +32,7 @@ export async function runSocaContentPlanTools(userMessage: string): Promise<{
 }> {
   const [boardContext, socialContext] = await Promise.all([
     getContentPlanContextForAgent(),
-    getSocialContextForAgent(8),
+    getSocialPerformanceContext(12),
   ]);
 
   let raw = "{}";

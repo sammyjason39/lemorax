@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Extend Lemorax dummy data from the last month in Supabase through yesterday.
+ * Extend Lemorax dummy data from the last month in Supabase through today.
  * Re-runnable: refreshes the current month each time (deletes + regenerates).
  *
  * Usage: npm run seed:extend
@@ -25,8 +25,7 @@ loadEnvLocal();
 const DRY_RUN = process.argv.includes("--dry-run");
 const FULL_MONTH = process.argv.includes("--full-month");
 const NOW = new Date();
-const YESTERDAY = new Date(NOW);
-YESTERDAY.setDate(YESTERDAY.getDate() - 1);
+const TODAY = new Date(NOW);
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -90,9 +89,9 @@ function getCurrentPeriode() {
   return formatYm(NOW.getFullYear(), NOW.getMonth() + 1);
 }
 
-/** Last month with data we should fill — yesterday's calendar month */
+/** Last month with data we should fill — today's calendar month */
 function getEndPeriode() {
-  return formatYm(YESTERDAY.getFullYear(), YESTERDAY.getMonth() + 1);
+  return formatYm(TODAY.getFullYear(), TODAY.getMonth() + 1);
 }
 
 function addMonths(ym, delta) {
@@ -131,7 +130,7 @@ function throughDayForMonth(periode) {
   // Full month seeding: useful when you want demo data through month-end
   // regardless of current calendar day.
   if (FULL_MONTH) return daysInMonth(periode);
-  return YESTERDAY.getDate();
+  return TODAY.getDate();
 }
 
 async function getLatestSalesDay(periode) {
@@ -179,6 +178,17 @@ function randInt(rng, min, max) {
 function varyNum(value, rng, pct = 0.12) {
   const delta = value * pct * (rng() * 2 - 1);
   return Math.round(value + delta);
+}
+
+function hashPeriode(periode) {
+  return Number(periode.replace("-", ""));
+}
+
+/** Stable 1.0–2.5% month-over-month growth, compounded from the source month. */
+function growthFactorForMonth(periode, step) {
+  const rng = seededRand(hashPeriode(periode));
+  const monthlyGrowth = 1.01 + rng() * 0.015;
+  return Math.pow(monthlyGrowth, step);
 }
 
 function randomDateInMonth(ym, rng, maxDay = null) {
@@ -243,11 +253,11 @@ function kpiStatus(pct) {
   return "Below Target";
 }
 
-function buildKpi(sourceKpi, periode, monthFraction) {
+function buildKpi(sourceKpi, periode, monthFraction, growthFactor) {
   return sourceKpi.map((row, i) => {
     const target = row.target;
-    const baseActual = Math.max(1, Math.round(row.actual * monthFraction));
-    const actual = varyNum(baseActual, seededRand(i + periode.charCodeAt(5)), 0.1);
+    const baseActual = Math.max(1, Math.round(row.actual * growthFactor * monthFraction));
+    const actual = varyNum(baseActual, seededRand(i + hashPeriode(periode)), 0.035);
     const achievement_pct = Math.round((actual / target) * 1000) / 10;
     return {
       periode,
@@ -293,7 +303,7 @@ function buildAbsensi(sourceAbsensi, periode, weeks) {
   return out;
 }
 
-function buildSales(sourceSales, periode, count, startTrxNum, maxDay = null) {
+function buildSales(sourceSales, periode, count, startTrxNum, growthFactor, maxDay = null) {
   const products = [...new Set(sourceSales.map((s) => s.produk))];
   const channels = [...new Set(sourceSales.map((s) => s.channel))];
   const statuses = ["Closed", "Closed", "Closed", "Closed", "Pending", "Cancelled"];
@@ -302,8 +312,8 @@ function buildSales(sourceSales, periode, count, startTrxNum, maxDay = null) {
   for (let i = 0; i < count; i++) {
     const src = sourceSales[i % sourceSales.length];
     const r = seededRand(startTrxNum + i);
-    const qty = varyNum(src.qty, r, 0.25);
-    const harga = varyNum(src.harga_satuan, r, 0.08);
+    const qty = varyNum(src.qty * growthFactor, r, 0.08);
+    const harga = varyNum(src.harga_satuan, r, 0.025);
     const tanggal = randomDateInMonth(periode, r, maxDay);
     out.push({
       transaction_id: `TRX${String(startTrxNum + i).padStart(6, "0")}`,
@@ -324,7 +334,7 @@ function buildSales(sourceSales, periode, count, startTrxNum, maxDay = null) {
   return out;
 }
 
-function buildFinance(sourceFinance, periode, sourcePeriode, count, startFinNum) {
+function buildFinance(sourceFinance, periode, sourcePeriode, count, startFinNum, growthFactor) {
   const out = [];
   for (let i = 0; i < count; i++) {
     const src = sourceFinance[i % sourceFinance.length];
@@ -336,7 +346,7 @@ function buildFinance(sourceFinance, periode, sourcePeriode, count, startFinNum)
       tipe: src.tipe,
       kategori: src.kategori,
       keterangan: keterangan.includes(periode) ? keterangan : `${src.kategori} - ${src.cabang} ${periode}`,
-      jumlah: varyNum(src.jumlah, r, 0.15),
+      jumlah: varyNum(src.jumlah * growthFactor, r, 0.04),
       metode_pembayaran: src.metode_pembayaran,
       referensi: `FIN${String(startFinNum + i).padStart(6, "0")}`,
     });
@@ -344,7 +354,7 @@ function buildFinance(sourceFinance, periode, sourcePeriode, count, startFinNum)
   return out;
 }
 
-function buildCrm(sourceCrm, periode, count, startDealNum, maxDay = null) {
+function buildCrm(sourceCrm, periode, count, startDealNum, growthFactor, maxDay = null) {
   const statuses = ["Closed Won", "Closed Won", "Proposal", "Negotiation", "Prospecting", "Closed Lost"];
   const out = [];
   for (let i = 0; i < count; i++) {
@@ -366,7 +376,7 @@ function buildCrm(sourceCrm, periode, count, startDealNum, maxDay = null) {
       no_hp_owner: src.no_hp_owner,
       email_owner: src.email_owner,
       tanggal_lahir_owner: src.tanggal_lahir_owner,
-      nilai_deal: varyNum(src.nilai_deal, r, 0.12),
+      nilai_deal: varyNum(src.nilai_deal * growthFactor, r, 0.04),
       status,
       produk_utama: src.produk_utama,
       frekuensi_order: src.frekuensi_order,
@@ -378,18 +388,18 @@ function buildCrm(sourceCrm, periode, count, startDealNum, maxDay = null) {
   return out;
 }
 
-function buildMarketing(sourceMarketing, periode, monthFraction) {
+function buildMarketing(sourceMarketing, periode, monthFraction, growthFactor) {
   return sourceMarketing.map((src, i) => {
     const r = seededRand(i + periode.charCodeAt(5) * 7);
-    const spend = varyNum(Math.round(src.spend * monthFraction), r, 0.1);
-    const conversions = varyNum(Math.max(1, Math.round(src.conversions * monthFraction)), r, 0.15);
-    const revenue = varyNum(Math.round(src.revenue_generated * monthFraction), r, 0.12);
+    const spend = varyNum(Math.round(src.spend * growthFactor * monthFraction), r, 0.04);
+    const conversions = varyNum(Math.max(1, Math.round(src.conversions * growthFactor * monthFraction)), r, 0.05);
+    const revenue = varyNum(Math.round(src.revenue_generated * growthFactor * monthFraction), r, 0.05);
     return {
       periode,
       campaign_name: src.campaign_name,
       channel: src.channel,
       target_audience: src.target_audience,
-      budget: varyNum(src.budget, r, 0.08),
+      budget: varyNum(src.budget * growthFactor, r, 0.03),
       spend,
       impressions: varyNum(Math.round(src.impressions * monthFraction), r, 0.1),
       clicks: varyNum(Math.round(src.clicks * monthFraction), r, 0.12),
@@ -437,7 +447,7 @@ async function resolvePlan() {
   }
 
   const sourcePeriode = addMonths(targetMonths[0], -1);
-  const throughDate = YESTERDAY.toISOString().slice(0, 10);
+  const throughDate = TODAY.toISOString().slice(0, 10);
 
   return { currentMonth, endMonth, maxPeriode, targetMonths, sourcePeriode, throughDate };
 }
@@ -488,33 +498,35 @@ async function main() {
   const allCrm = [];
   const allMarketing = [];
 
-  for (const periode of targetMonths) {
+  for (const [monthIndex, periode] of targetMonths.entries()) {
     const maxDay = throughDayForMonth(periode);
-    const isPartial = maxDay !== null;
-    const monthFraction = isPartial ? maxDay / daysInMonth(periode) : 1;
-    const weeks = isPartial ? Math.max(1, Math.ceil(maxDay / 7)) : 5;
+    const monthFraction = maxDay / daysInMonth(periode);
+    const isPartial = monthFraction < 1;
+    const weeks = Math.max(1, Math.ceil(maxDay / 7));
+    const growthFactor = growthFactorForMonth(periode, monthIndex + 1);
 
     console.log(
-      `🔧 Generating ${periode}${isPartial ? ` (partial, day 1–${maxDay})` : ""}...`
+      `🔧 Generating ${periode}${isPartial ? ` (partial, day 1–${maxDay})` : ""} ` +
+        `(growth ${(growthFactor * 100 - 100).toFixed(1)}% vs ${sourcePeriode})...`
     );
 
-    allKpi.push(...buildKpi(sourceKpi, periode, monthFraction));
+    allKpi.push(...buildKpi(sourceKpi, periode, monthFraction, growthFactor));
     allAbsensi.push(...buildAbsensi(sourceAbsensi, periode, weeks));
 
-    const salesCount = Math.max(1, Math.round(sourceSales.length * monthFraction));
-    const financeCount = Math.max(1, Math.round(sourceFinance.length * monthFraction));
-    const crmCount = Math.max(1, Math.round(sourceCrm.length * monthFraction));
+    const salesCount = Math.max(1, Math.round(sourceSales.length * growthFactor * monthFraction));
+    const financeCount = Math.max(1, Math.round(sourceFinance.length * growthFactor * monthFraction));
+    const crmCount = Math.max(1, Math.round(sourceCrm.length * growthFactor * monthFraction));
 
-    allSales.push(...buildSales(sourceSales, periode, salesCount, trxNum, maxDay));
+    allSales.push(...buildSales(sourceSales, periode, salesCount, trxNum, growthFactor, maxDay));
     trxNum += salesCount;
 
-    allFinance.push(...buildFinance(sourceFinance, periode, sourcePeriode, financeCount, finNum));
+    allFinance.push(...buildFinance(sourceFinance, periode, sourcePeriode, financeCount, finNum, growthFactor));
     finNum += financeCount;
 
-    allCrm.push(...buildCrm(sourceCrm, periode, crmCount, dealNum, maxDay));
+    allCrm.push(...buildCrm(sourceCrm, periode, crmCount, dealNum, growthFactor, maxDay));
     dealNum += crmCount;
 
-    allMarketing.push(...buildMarketing(sourceMarketing, periode, monthFraction));
+    allMarketing.push(...buildMarketing(sourceMarketing, periode, monthFraction, growthFactor));
   }
 
   console.log("\n📦 Generated totals:");

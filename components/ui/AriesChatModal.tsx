@@ -103,7 +103,7 @@ function MarkdownContent({ content }: { content: string }) {
   );
 }
 
-export function OpenclawChatModal() {
+export function AriesChatModal() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);

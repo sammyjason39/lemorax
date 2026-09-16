@@ -8,7 +8,7 @@ import { PRINCIPAL_NAME } from "@/lib/brand";
 import type { StaffStreamChunk } from "@/lib/staff-agents/stream";
 import { isTextChunk } from "@/lib/staff-agents/stream";
 import { buildAgentPromptExtras } from "@/lib/staff-agents/agent-context";
-import { getSocialContextForAgent } from "@/lib/social-media/store";
+import { getSocialContextForAgent, getSocialPerformanceContext } from "@/lib/social-media/store";
 import { getContentPlanContextForAgent } from "@/lib/content-plan/store";
 import { CONTENT_PLAN_KEYWORDS, runSocaContentPlanTools } from "@/lib/content-plan/soca-runner";
 import { streamChatCompletion } from "@/lib/ai/chat-provider";
@@ -17,7 +17,7 @@ const DATA_KEYWORDS =
   /\b(cabang|sales|revenue|omset|kpi|profit|crm|deal|marketing|finance|absensi|karyawan|transaksi|berapa|total|data|laporan)\b/i;
 
 const SOCIAL_KEYWORDS =
-  /\b(instagram|ig|social|sosmed|engagement|follower|followers|reach|impression|konten|posting|reels|tiktok|soca|konversi sosial|like|komentar|content plan|ide konten|script|kanban|caption)\b/i;
+  /\b(instagram|ig|social|sosmed|engagement|follower|followers|reach|impression|konten|posting|postingan|reels|reel|video|tiktok|soca|konversi sosial|like|likes|komentar|content plan|ide konten|script|kanban|caption|performa|performances|analisa|analisis|insight|insight konten|konten berikutnya|konten selanjutnya|strategi konten|video selanjutnya|video berikutnya|apa yang|kenapa|mengapa)\b/i;
 
 function agentHasSqlSkill(agent: StaffAgent): boolean {
   return agent.skills.some((s) => s.id === "sql" || s.tags.includes("data"));
@@ -83,7 +83,9 @@ export async function* streamStaffAgentReply(
         getSocialContextForAgent(),
         getContentPlanContextForAgent(),
       ]);
-      if (socialBlock) dataContext += `\n\n${socialBlock}`;
+      const performanceBlock = await getSocialPerformanceContext(24);
+      if (performanceBlock) dataContext += `\n\n${performanceBlock}`;
+      else if (socialBlock) dataContext += `\n\n${socialBlock}`;
       if (planBlock) dataContext += `\n\n${planBlock}`;
 
       if (

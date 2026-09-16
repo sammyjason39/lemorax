@@ -94,10 +94,10 @@ export function getDeltaBgColor(delta: number): string {
  */
 export function getKPIStatusColor(status: string): string {
   const map: Record<string, string> = {
-    Excellent: "bg-[#DCE5FE] text-[#1652F0] border-[#1652F0]/30",
-    "On Track": "bg-[#DCE5FE]/60 text-[#3B5CB8] border-[#3B5CB8]/30",
-    Warning: "bg-slate-100 text-[#6B7280] border-[#94A3B8]/40",
-    "Below Target": "bg-slate-200 text-[#1E293B] border-[#475569]/40",
+    Excellent: "bg-[#E5F7F1] text-[#007C63] border-[#00A884]/30",
+    "On Track": "bg-[#E5F7F7] text-[#147C7C] border-[#1BA6A6]/30",
+    Warning: "bg-[#FFF6E3] text-[#9A6508] border-[#EAA42A]/35",
+    "Below Target": "bg-[#FDEBEC] text-[#A83B3B] border-[#E05454]/30",
   };
   return map[status] || "bg-slate-100 text-slate-500 border-slate-300/40";
 }
@@ -107,11 +107,11 @@ export function getKPIStatusColor(status: string): string {
  */
 export function getCRMStatusColor(status: string): string {
   const map: Record<string, string> = {
-    "Closed Won": "bg-[#DCE5FE] text-[#1652F0] border-[#1652F0]/30",
-    "Closed Lost": "bg-slate-200 text-[#1E293B] border-[#475569]/40",
-    Negotiation: "bg-[#DCE5FE]/60 text-[#3B5CB8] border-[#3B5CB8]/30",
-    Proposal: "bg-slate-100 text-[#6B7280] border-[#94A3B8]/40",
-    Prospecting: "bg-slate-50 text-[#94A3B8] border-[#CBD5E1]/60",
+    "Closed Won": "bg-[#E5F7F1] text-[#007C63] border-[#00A884]/30",
+    "Closed Lost": "bg-[#FDEBEC] text-[#A83B3B] border-[#E05454]/30",
+    Negotiation: "bg-[#EEEAFE] text-[#5947D6] border-[#6C5CE7]/30",
+    Proposal: "bg-[#E6F2FF] text-[#1769B7] border-[#2784E8]/30",
+    Prospecting: "bg-[#FFF6E3] text-[#9A6508] border-[#EAA42A]/35",
   };
   return map[status] || "bg-slate-100 text-slate-500 border-slate-300/40";
 }
@@ -121,9 +121,9 @@ export function getCRMStatusColor(status: string): string {
  */
 export function getSalesStatusColor(status: string): string {
   const map: Record<string, string> = {
-    Closed: "bg-[#DCE5FE] text-[#1652F0] border-[#1652F0]/30",
-    Pending: "bg-slate-100 text-[#6B7280] border-[#94A3B8]/40",
-    Cancelled: "bg-slate-200 text-[#1E293B] border-[#475569]/40",
+    Closed: "bg-[#E5F7F1] text-[#007C63] border-[#00A884]/30",
+    Pending: "bg-[#FFF6E3] text-[#9A6508] border-[#EAA42A]/35",
+    Cancelled: "bg-[#FDEBEC] text-[#A83B3B] border-[#E05454]/30",
   };
   return map[status] || "bg-slate-100 text-slate-500 border-slate-300/40";
 }

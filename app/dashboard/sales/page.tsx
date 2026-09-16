@@ -10,7 +10,10 @@ import {
   CartesianGrid, Tooltip, Legend, Cell
 } from "recharts";
 import { formatRupiahShort, formatRupiah, formatPeriode, getSalesStatusColor } from "@/lib/formatters";
-import { CHART_PRIMARY, CHART_SECONDARY, CHART_AXIS, CHART_GRID, CHART_MUTED, getChartColor, getCategoricalColor } from "@/lib/brand";
+import { brand, domain, CHART_AXIS, CHART_GRID, CHART_MUTED, getChartColor, getCategoricalColor } from "@/lib/brand";
+
+const SALES_PRIMARY = domain.sales;
+const SALES_SECONDARY = brand.teal;
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -67,14 +70,14 @@ export default function SalesPage() {
     {
       key: "tipe", label: "Tipe",
       render: (r: any) => (
-        <span className="badge" style={{ background: r.tipe === "B2B" ? "rgba(22,82,240,0.12)" : "rgba(148,163,184,0.2)", color: r.tipe === "B2B" ? CHART_PRIMARY : CHART_SECONDARY, borderColor: "transparent" }}>
+        <span className="badge" style={{ background: r.tipe === "B2B" ? brand.violetSoft : brand.tealSoft, color: r.tipe === "B2B" ? SALES_PRIMARY : SALES_SECONDARY, borderColor: "transparent" }}>
           {r.tipe}
         </span>
       )
     },
     { key: "produk", label: "Produk" },
     { key: "qty", label: "Qty", align: "right" as const, sortable: true },
-    { key: "total", label: "Total", sortable: true, align: "right" as const, render: (r: any) => <span style={{ color: "#1652F0" }}>{formatRupiah(r.total)}</span> },
+    { key: "total", label: "Total", sortable: true, align: "right" as const, render: (r: any) => <span style={{ color: SALES_PRIMARY }}>{formatRupiah(r.total)}</span> },
     {
       key: "status", label: "Status",
       render: (r: any) => <span className={`badge ${getSalesStatusColor(r.status)}`}>{r.status}</span>
@@ -105,8 +108,8 @@ export default function SalesPage() {
                   <YAxis tickFormatter={formatRupiahShort} tick={{ fill: CHART_AXIS, fontSize: 11 }} axisLine={false} tickLine={false} width={72} />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend wrapperStyle={{ fontSize: "12px", color: CHART_MUTED }} />
-                  <Line type="monotone" dataKey="b2b" name="B2B" stroke={CHART_PRIMARY} strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="b2c" name="B2C" stroke={CHART_SECONDARY} strokeWidth={2} strokeDasharray="4 3" dot={false} />
+                  <Line type="monotone" dataKey="b2b" name="B2B" stroke={SALES_PRIMARY} strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="b2c" name="B2C" stroke={SALES_SECONDARY} strokeWidth={2} strokeDasharray="4 3" dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             )}
@@ -125,9 +128,9 @@ export default function SalesPage() {
                   <YAxis tickFormatter={formatRupiahShort} tick={{ fill: CHART_AXIS, fontSize: 11 }} axisLine={false} tickLine={false} width={72} />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend wrapperStyle={{ fontSize: "12px", color: CHART_MUTED }} />
-                  <Bar dataKey="2024" name="2024" fill={yoyYearColors["2024"] || CHART_SECONDARY} fillOpacity={0.92} radius={[2,2,0,0]} maxBarSize={20} />
-                  <Bar dataKey="2025" name="2025" fill={yoyYearColors["2025"] || CHART_PRIMARY} fillOpacity={0.92} radius={[2,2,0,0]} maxBarSize={20} />
-                  <Bar dataKey="2026" name="2026" fill={yoyYearColors["2026"] || CHART_PRIMARY} fillOpacity={0.92} radius={[2,2,0,0]} maxBarSize={20} />
+                  <Bar dataKey="2024" name="2024" fill={yoyYearColors["2024"] || brand.muted2} fillOpacity={0.92} radius={[2,2,0,0]} maxBarSize={20} />
+                  <Bar dataKey="2025" name="2025" fill={yoyYearColors["2025"] || SALES_SECONDARY} fillOpacity={0.92} radius={[2,2,0,0]} maxBarSize={20} />
+                  <Bar dataKey="2026" name="2026" fill={yoyYearColors["2026"] || SALES_PRIMARY} fillOpacity={0.92} radius={[2,2,0,0]} maxBarSize={20} />
                 </BarChart>
               </ResponsiveContainer>
             )}

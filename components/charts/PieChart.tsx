@@ -58,12 +58,9 @@ export function AriesPieChart({
 }: AriesPieChartProps) {
   const chartData = useMemo(() => {
     const sorted = [...data].sort((a, b) => b.value - a.value);
-    const allFixed = sorted.length > 0 && sorted.every((d) => d.color);
     return sorted.map((entry, i) => ({
       ...entry,
-      fill: allFixed
-        ? entry.color!
-        : getCategoricalColor(i, sorted.length),
+      fill: entry.color ?? getCategoricalColor(i, sorted.length),
     }));
   }, [data]);
 

@@ -8,20 +8,21 @@ import { DataTable } from "@/components/tables/DataTable";
 import { formatPct, getKPIStatusColor } from "@/lib/formatters";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell } from "recharts";
 import { CABANG_LIST } from "@/types";
-import { CHART_PRIMARY, CHART_SECONDARY, CHART_AXIS, CHART_GRID, getBucketColor, getHeatmapCellStyle } from "@/lib/brand";
+import { brand, domain, CHART_PRIMARY, CHART_SECONDARY, CHART_AXIS, CHART_GRID, getBucketColor, getHeatmapCellStyle } from "@/lib/brand";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-function HeatmapCell({ value }: { value: number }) {
-  const { background, color } = getHeatmapCellStyle(value);
+function HeatmapCell({ value, active }: { value: number; active: boolean }) {
+  const semantic = getHeatmapCellStyle(value);
   return (
     <td
-      title={value > 0 ? `${value.toFixed(1)}%` : undefined}
+      title={value > 0 ? `${value.toFixed(1)}%${active ? " · Bulan aktif" : ""}` : undefined}
       className="border text-center text-[10px] font-sans font-bold cursor-default transition-all"
       style={{
-        background,
-        borderColor: "var(--border)",
-        color,
+        background: active ? brand.blueSoft : semantic.background,
+        borderColor: active ? brand.blue : "var(--border)",
+        boxShadow: active ? `inset 0 0 0 1px ${brand.blue}` : undefined,
+        color: active ? brand.blue : semantic.color,
         padding: "6px 4px",
         minWidth: "52px",
       }}
@@ -159,11 +160,15 @@ export default function KPIPage() {
                 <thead>
                   <tr>
                     <th className="text-left py-2 pr-4" style={{ color: "var(--text-muted)", minWidth: "120px" }}>Cabang</th>
-                    {heatmapMonths.map((m) => (
-                      <th key={m} className="text-center py-2 px-1" style={{ color: "var(--text-muted)", minWidth: "52px" }}>
-                        {m.slice(5)} <span className="text-[9px]">{m.slice(2,4)}</span>
-                      </th>
-                    ))}
+                    {heatmapMonths.map((m) => {
+                      const active = m === resolvedPeriodeEnd;
+                      return (
+                        <th key={m} className="text-center py-2 px-1" style={{ color: active ? brand.blue : "var(--text-muted)", minWidth: "52px" }}>
+                          {m.slice(5)} <span className="text-[9px]">{m.slice(2,4)}</span>
+                          {active && <span className="block text-[8px] font-semibold">Aktif</span>}
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody>
@@ -171,7 +176,7 @@ export default function KPIPage() {
                     <tr key={cb}>
                       <td className="py-1 pr-4 text-xs" style={{ color: "var(--text-secondary)" }}>{cb}</td>
                       {heatmapMonths.map((m) => (
-                        <HeatmapCell key={m} value={heatmapByName[cb]?.[m] || 0} />
+                        <HeatmapCell key={m} value={heatmapByName[cb]?.[m] || 0} active={m === resolvedPeriodeEnd} />
                       ))}
                     </tr>
                   ))}

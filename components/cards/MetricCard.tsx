@@ -20,6 +20,8 @@ interface MetricCardProps {
   icon?: React.ReactNode;
   loading?: boolean;
   className?: string;
+  accentColor?: string;
+  accentSoft?: string;
 }
 
 function Sparkline({ data, color }: { data: number[]; color: string }) {
@@ -44,6 +46,8 @@ export function MetricCard({
   icon,
   loading = false,
   className = "",
+  accentColor = brand.blue,
+  accentSoft = brand.blueSoft,
 }: MetricCardProps) {
   if (loading) {
     return (
@@ -64,7 +68,14 @@ export function MetricCard({
         <p className="label-mono" style={{ color: "var(--text-muted)" }}>
           {title}
         </p>
-        {icon && <div className="opacity-60 group-hover:opacity-100 transition-opacity">{icon}</div>}
+        {icon && (
+          <div
+            className="w-9 h-9 -mt-1 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105"
+            style={{ background: accentSoft, color: accentColor }}
+          >
+            {icon}
+          </div>
+        )}
       </div>
 
       <div className="flex items-end justify-between gap-2">
@@ -82,11 +93,11 @@ export function MetricCard({
                 className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] font-semibold"
                 style={{
                   background: isPositive
-                    ? brand.blueSoft
+                    ? brand.emeraldSoft
                     : isNegative
-                    ? "rgba(239,68,68,0.1)"
-                    : "rgba(107,114,128,0.1)",
-                  color: isPositive ? brand.blue : isNegative ? brand.danger : brand.muted,
+                    ? brand.dangerSoft
+                    : "rgba(105,115,134,0.1)",
+                  color: isPositive ? brand.emerald : isNegative ? brand.danger : brand.muted,
                 }}
               >
                 {isPositive ? <TrendingUp size={10} /> : isNegative ? <TrendingDown size={10} /> : <Minus size={10} />}

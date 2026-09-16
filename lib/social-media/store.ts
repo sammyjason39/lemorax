@@ -1,5 +1,13 @@
 import { createServerSupabaseClient } from "@/lib/supabase";
 import type { ApifyInstagramProfile } from "@/lib/apify/instagram";
+import { persistRemoteMediaOnce } from "@/lib/social-media/media-store";
+import { configureInstagramFetch } from "@/lib/social-media/fetch";
+
+configureInstagramFetch();
+
+function mediaProxy(u: string | null): string | null {
+  return u ? `/api/social-media/media?url=${encodeURIComponent(u)}` : null;
+}
 
 export type SocialProfile = {
   id: string;
@@ -140,6 +148,128 @@ export async function getSocialContextForAgent(limit = 15): Promise<string> {
   }
 }
 
+/**
+ * Full past-performance digest for Soca: every post with real metrics,
+ * format breakdowns, timing patterns, and hashtag performance so the agent
+ * can reason about what to create next.
+ */
+export async function getSocialPerformanceContext(limit = 24): Promise<string> {
+  try {
+    const sb = createServerSupabaseClient();
+    const { data: profiles } = await sb.from("social_media_profiles").select("*").order("followers", { ascending: false });
+    if (!profiles?.length) return "";
+
+    const { data: posts } = await sb
+      .from("social_media_posts")
+      .select("caption, media_type, published_at, likes, comments, reach, impressions, engagement_rate, external_id, raw")
+      .order("published_at", { ascending: false })
+      .limit(limit);
+
+    const real = (posts || []).filter((p: any) => p.raw?.source !== "seed" && (p.likes > 0 || p.comments > 0));
+
+    const lines = real.map((p: any, i: number) => {
+      const cap = (p.caption || "").replace(/\s+/g, " ").slice(0, 110);
+      const views = Number(p.raw?.videoViewCount) || 0;
+      const hashtags: string[] = Array.isArray(p.raw?.hashtags) ? p.raw.hashtags : [];
+      const dt = p.published_at ? new Date(p.published_at) : null;
+      const when = dt ? `${dt.toISOString().slice(0, 10)} ${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}` : "?";
+      const parts = [
+        `${i + 1}. [${p.media_type || "?"} | ${when}] "${cap}"`,
+        `   likes ${p.likes} · comments ${p.comments} · ER ${p.engagement_rate}%${views ? ` · views ${views}` : ""} · reach ${p.reach}`,
+      ];
+      if (hashtags.length) parts.push(`   hashtags: ${hashtags.slice(0, 8).map((h) => `#${h}`).join(" ")}`);
+      return parts.join("\n");
+    });
+
+    // Aggregates for reasoning
+    const total = real.length;
+    const avg = (arr: number[]) => (arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0);
+    const byType: Record<string, { n: number; er: number[]; likes: number[] }> = {};
+    const byHour: Record<number, { n: number; er: number[] }> = {};
+    const byDow: Record<number, { n: number; er: number[] }> = {};
+    const tagStats: Record<string, { n: number; er: number[] }> = {};
+    let bestER: { er: number; cap: string; type: string } | null = null;
+    let worstER: { er: number; cap: string; type: string } | null = null;
+
+    for (const p of real) {
+      const type = p.media_type || "Image";
+      (byType[type] ||= { n: 0, er: [], likes: [] });
+      byType[type].n++;
+      byType[type].er.push(p.engagement_rate || 0);
+      byType[type].likes.push(p.likes || 0);
+
+      if (p.published_at) {
+        const d = new Date(p.published_at);
+        (byHour[d.getHours()] ||= { n: 0, er: [] });
+        byHour[d.getHours()].er.push(p.engagement_rate || 0);
+        byHour[d.getHours()].n++;
+        (byDow[d.getDay()] ||= { n: 0, er: [] });
+        byDow[d.getDay()].er.push(p.engagement_rate || 0);
+        byDow[d.getDay()].n++;
+      }
+      for (const h of (Array.isArray(p.raw?.hashtags) ? p.raw.hashtags : []).slice(0, 10)) {
+        (tagStats[h] ||= { n: 0, er: [] });
+        tagStats[h].n++;
+        tagStats[h].er.push(p.engagement_rate || 0);
+      }
+      const item = { er: p.engagement_rate || 0, cap: (p.caption || "").replace(/\s+/g, " ").slice(0, 60), type };
+      if (!bestER || item.er > bestER.er) bestER = item;
+      if (!worstER || item.er < worstER.er) worstER = item;
+    }
+
+    const DOW = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+    const typeLines = Object.entries(byType)
+      .map(([t, v]) => `- ${t}: ${v.n} post, rata-rata ER ${avg(v.er).toFixed(2)}%, rata-rata likes ${Math.round(avg(v.likes)).toLocaleString("id-ID")}`)
+      .join("\n");
+    const hourLines = Object.entries(byHour)
+      .map(([h, v]) => `- jam ${String(h).padStart(2, "0")}:00 (${v.n}x, ER rata ${avg(v.er).toFixed(2)}%)`)
+      .join("\n");
+    const dowLines = Object.entries(byDow)
+      .map(([d, v]) => `- ${DOW[Number(d)]} (${v.n}x, ER rata ${avg(v.er).toFixed(2)}%)`)
+      .join("\n");
+    const topTags = Object.entries(tagStats)
+      .sort((a, b) => b[1].er.length * avg(b[1].er) - a[1].er.length * avg(a[1].er))
+      .slice(0, 10)
+      .map(([h, v]) => `#${h} (${v.n}x, ER rata ${avg(v.er).toFixed(2)}%)`)
+      .join(", ");
+
+    const overallER = avg(real.map((p: any) => p.engagement_rate || 0));
+
+    return [
+      "## Past Performance Social Media (data real dari sync)",
+      "",
+      "### Profil akun",
+      (profiles || [])
+        .map((p: any) => `- @${p.username} (${p.platform}): ${(p.followers || 0).toLocaleString("id-ID")} followers, ER ${p.engagement_rate}%`)
+        .join("\n"),
+      "",
+      `### Ringkasan ${total} konten terakhir`,
+      `- ER keseluruhan rata-rata: ${overallER.toFixed(2)}%`,
+      `- Konten terbaik: [${bestER?.type}] "${bestER?.cap}" ER ${bestER?.er.toFixed(2)}%`,
+      `- Konten terendah: [${worstER?.type}] "${worstER?.cap}" ER ${worstER?.er.toFixed(2)}%`,
+      "",
+      "### Performa per format",
+      typeLines || "(belum ada data)",
+      "",
+      "### Jam posting (WIB)",
+      hourLines || "(belum ada data)",
+      "",
+      "### Hari posting",
+      dowLines || "(belum ada data)",
+      "",
+      "### Hashtag paling berdampak",
+      topTags || "(belum ada data)",
+      "",
+      "### Detail konten",
+      lines.join("\n"),
+      "",
+      "Gunakan data ini untuk menjawab pertanyaan performa dan memberi rekomendasi konten berikutnya. Selalu rujuk angka nyata, sebutkan format dan jam yang paling berhasil, dan kaitkan rekomendasi video berikutnya dengan pola yang terbukti.",
+    ].join("\n");
+  } catch {
+    return "";
+  }
+}
+
 export async function upsertFromApifyProfile(raw: ApifyInstagramProfile): Promise<{ profileId: string; postsUpserted: number }> {
   const username = (raw.username || "").trim();
   if (!username) throw new Error("Apify profile missing username");
@@ -197,6 +327,18 @@ export async function upsertFromApifyProfile(raw: ApifyInstagramProfile): Promis
 
     const er = postEngagementRate(likes, comments, followers);
     const reach = Math.max(likes + comments, Math.round(followers * 0.18));
+    const videoUrl = typeof post.videoUrl === "string" ? post.videoUrl : null;
+
+    // Instagram CDN URLs are signed and expire — archive media into Supabase
+    // Storage at sync time so cards keep working after the signature lapses.
+    const shortCodeSafe = String(shortCode || `post_${postsUpserted}`).replace(/[^A-Za-z0-9_-]/g, "");
+    const thumbStored = await persistRemoteMediaOnce(
+      post.displayUrl || null,
+      `${id}/${shortCodeSafe}_cover.jpg`
+    );
+    const videoStored = videoUrl
+      ? await persistRemoteMediaOnce(videoUrl, `${id}/${shortCodeSafe}_video.mp4`)
+      : null;
 
     const { error: postErr } = await sb.from("social_media_posts").upsert(
       {
@@ -213,8 +355,8 @@ export async function upsertFromApifyProfile(raw: ApifyInstagramProfile): Promis
         reach,
         impressions: Math.round(reach * 1.4),
         engagement_rate: er,
-        thumbnail_url: post.displayUrl || null,
-        raw: post,
+        thumbnail_url: thumbStored || mediaProxy(post.displayUrl || null),
+        raw: { ...post, proxiedVideoUrl: videoStored || mediaProxy(videoUrl) },
         updated_at: now,
       },
       { onConflict: "id" }
