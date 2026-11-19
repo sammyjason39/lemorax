@@ -2,9 +2,11 @@
 /**
  * Extend Lemorax dummy data from the last month in Supabase through today.
  * Re-runnable: refreshes the current month each time (deletes + regenerates).
+ * Generates a varied economic-downturn curve (revenue down, costs sticky).
  *
  * Usage: npm run seed:extend
  *        node scripts/seed-extend-data.mjs --dry-run
+ *        node scripts/seed-extend-data.mjs --refresh-from=2025-01
  */
 import fs from "fs";
 import path from "path";
@@ -24,6 +26,8 @@ loadEnvLocal();
 
 const DRY_RUN = process.argv.includes("--dry-run");
 const FULL_MONTH = process.argv.includes("--full-month");
+const REFRESH_FROM = (process.argv.find((a) => a.startsWith("--refresh-from=")) || "")
+  .split("=")[1] || null;
 const NOW = new Date();
 const TODAY = new Date(NOW);
 
@@ -150,7 +154,11 @@ async function isMonthIncomplete(periode) {
   if (!expected) return false;
   const latest = await getLatestSalesDay(periode);
   if (!latest) return true;
-  return latest < expected - 1;
+  // Historical months in this dataset often stop around day 28 — treat near-complete as done
+  // so we don't wipe baseline months when filling a long gap to "today".
+  const endMonth = getEndPeriode();
+  if (periode < endMonth) return latest < Math.min(expected, 27);
+  return latest < expected;
 }
 
 async function getMaxPeriode(table = "sales_report") {
@@ -164,9 +172,13 @@ async function getMaxPeriode(table = "sales_report") {
 }
 
 function seededRand(seed) {
-  let s = seed;
+  // Park–Miller LCG. Normalize + warm up so nearby seeds (trx+1, trx+2, …)
+  // don't collapse to the same first day/value.
+  let s = Math.abs(Math.trunc(seed)) % 2147483647;
+  if (s === 0) s = 1;
+  for (let i = 0; i < 5; i++) s = (s * 16807) % 2147483647;
   return () => {
-    s = (s * 16807 + 0) % 2147483647;
+    s = (s * 16807) % 2147483647;
     return (s - 1) / 2147483646;
   };
 }
@@ -184,11 +196,49 @@ function hashPeriode(periode) {
   return Number(periode.replace("-", ""));
 }
 
-/** Stable 1.0–2.5% month-over-month growth, compounded from the source month. */
+/**
+ * Economic downturn curve: soft drag → sharper squeeze → volatile bottom.
+ * Returns revenue/volume multiplier vs source month (usually < 1).
+ * step=1 is first generated month after the source template.
+ */
 function growthFactorForMonth(periode, step) {
-  const rng = seededRand(hashPeriode(periode));
-  const monthlyGrowth = 1.01 + rng() * 0.015;
-  return Math.pow(monthlyGrowth, step);
+  let factor = 1;
+  for (let s = 1; s <= step; s++) {
+    const r = seededRand(10007 + s * 97);
+    // Phase by distance from source: soft → sharp → sticky/volatile
+    let drag;
+    if (s <= 6) drag = 0.015 + r() * 0.012; // -1.5%..-2.7%
+    else if (s <= 15) drag = 0.025 + r() * 0.02; // -2.5%..-4.5%
+    else if (s <= 21) drag = 0.02 + r() * 0.016; // -2.0%..-3.6%
+    else drag = 0.014 + r() * 0.018; // -1.4%..-3.2%
+
+    // Rare weak bounce (~8%) — still net down across the horizon
+    const monthMul = r() < 0.08 ? 1 + (0.005 + r() * 0.012) : 1 - drag;
+    factor *= monthMul;
+  }
+
+  // Small periode-specific jitter so sibling months aren't identical
+  const jitter = seededRand(hashPeriode(periode) + 91)();
+  factor *= 0.975 + jitter * 0.04;
+
+  return Math.max(0.45, Math.min(1.02, factor));
+}
+
+/** Sticky costs: expenses fall slower (or creep up) vs revenue → margin squeeze. */
+function expenseFactor(revenueFactor, periode) {
+  const rng = seededRand(hashPeriode(periode) + 44);
+  // stickiness = share of the revenue drop that costs refuse to give back
+  const stickiness = 0.45 + rng() * 0.35;
+  const inflation = 1 + Math.min(0.08, 0.0025 * Math.max(0, hashPeriode(periode) - 202405));
+  return Math.min(1.15, (revenueFactor + (1 - revenueFactor) * stickiness) * inflation);
+}
+
+/** Intra-month softness: later days weaker (demand fade / cash squeeze). */
+function dayDemandWeight(day, maxDay, periode) {
+  const rng = seededRand(hashPeriode(periode) * 10 + day);
+  const progress = (day - 1) / Math.max(1, maxDay - 1);
+  const curve = 1.08 - progress * 0.28 - Math.pow(progress, 1.6) * 0.12;
+  return Math.max(0.62, curve * (0.92 + rng() * 0.16));
 }
 
 function randomDateInMonth(ym, rng, maxDay = null) {
@@ -256,8 +306,10 @@ function kpiStatus(pct) {
 function buildKpi(sourceKpi, periode, monthFraction, growthFactor) {
   return sourceKpi.map((row, i) => {
     const target = row.target;
-    const baseActual = Math.max(1, Math.round(row.actual * growthFactor * monthFraction));
-    const actual = varyNum(baseActual, seededRand(i + hashPeriode(periode)), 0.035);
+    // Targets stay ambitious while actuals lag — more Warning / Below Target
+    const hardship = 0.88 + seededRand(i * 3 + hashPeriode(periode))() * 0.1;
+    const baseActual = Math.max(1, Math.round(row.actual * growthFactor * hardship * monthFraction));
+    const actual = varyNum(baseActual, seededRand(i + hashPeriode(periode)), 0.06);
     const achievement_pct = Math.round((actual / target) * 1000) / 10;
     return {
       periode,
@@ -306,15 +358,25 @@ function buildAbsensi(sourceAbsensi, periode, weeks) {
 function buildSales(sourceSales, periode, count, startTrxNum, growthFactor, maxDay = null) {
   const products = [...new Set(sourceSales.map((s) => s.produk))];
   const channels = [...new Set(sourceSales.map((s) => s.channel))];
-  const statuses = ["Closed", "Closed", "Closed", "Closed", "Pending", "Cancelled"];
+  // Harder close rates + more cancellations as demand softens
+  const statuses =
+    growthFactor < 0.7
+      ? ["Closed", "Closed", "Pending", "Pending", "Cancelled", "Cancelled"]
+      : growthFactor < 0.85
+        ? ["Closed", "Closed", "Closed", "Pending", "Cancelled", "Cancelled"]
+        : ["Closed", "Closed", "Closed", "Closed", "Pending", "Cancelled"];
   const out = [];
+  const lastDay = maxDay ?? daysInMonth(periode);
 
   for (let i = 0; i < count; i++) {
     const src = sourceSales[i % sourceSales.length];
     const r = seededRand(startTrxNum + i);
-    const qty = varyNum(src.qty * growthFactor, r, 0.08);
-    const harga = varyNum(src.harga_satuan, r, 0.025);
     const tanggal = randomDateInMonth(periode, r, maxDay);
+    const day = parseInt(tanggal.slice(8, 10), 10);
+    const dayW = dayDemandWeight(day, lastDay, periode);
+    // Discounting pressure: harga turun lebih cepat dari qty
+    const qty = Math.max(1, varyNum(src.qty * growthFactor * dayW, r, 0.14));
+    const harga = Math.max(1, varyNum(src.harga_satuan * (0.94 + growthFactor * 0.06), r, 0.05));
     out.push({
       transaction_id: `TRX${String(startTrxNum + i).padStart(6, "0")}`,
       periode,
@@ -336,17 +398,22 @@ function buildSales(sourceSales, periode, count, startTrxNum, growthFactor, maxD
 
 function buildFinance(sourceFinance, periode, sourcePeriode, count, startFinNum, growthFactor) {
   const out = [];
+  const expF = expenseFactor(growthFactor, periode);
   for (let i = 0; i < count; i++) {
     const src = sourceFinance[i % sourceFinance.length];
     const r = seededRand(startFinNum + i);
     const keterangan = String(src.keterangan || "").replace(sourcePeriode, periode);
+    const isExpense = /pengeluaran|expense|cost/i.test(String(src.tipe || ""));
+    const factor = isExpense ? expF : growthFactor;
+    // Pemasukan more volatile; pengeluaran stickier with less noise
+    const jumlah = varyNum(src.jumlah * factor, r, isExpense ? 0.035 : 0.09);
     out.push({
       periode,
       cabang: src.cabang,
       tipe: src.tipe,
       kategori: src.kategori,
       keterangan: keterangan.includes(periode) ? keterangan : `${src.kategori} - ${src.cabang} ${periode}`,
-      jumlah: varyNum(src.jumlah * growthFactor, r, 0.04),
+      jumlah,
       metode_pembayaran: src.metode_pembayaran,
       referensi: `FIN${String(startFinNum + i).padStart(6, "0")}`,
     });
@@ -355,13 +422,20 @@ function buildFinance(sourceFinance, periode, sourcePeriode, count, startFinNum,
 }
 
 function buildCrm(sourceCrm, periode, count, startDealNum, growthFactor, maxDay = null) {
-  const statuses = ["Closed Won", "Closed Won", "Proposal", "Negotiation", "Prospecting", "Closed Lost"];
+  const statuses =
+    growthFactor < 0.7
+      ? ["Closed Won", "Proposal", "Negotiation", "Prospecting", "Closed Lost", "Closed Lost"]
+      : growthFactor < 0.85
+        ? ["Closed Won", "Closed Won", "Proposal", "Negotiation", "Closed Lost", "Closed Lost"]
+        : ["Closed Won", "Closed Won", "Proposal", "Negotiation", "Prospecting", "Closed Lost"];
   const out = [];
   for (let i = 0; i < count; i++) {
     const src = sourceCrm[i % sourceCrm.length];
     const r = seededRand(startDealNum + i);
     const status = statuses[randInt(r, 0, statuses.length - 1)];
     const followUp = randomDateInMonth(periode, r, maxDay);
+    // Deal sizes shrink + more discounting in downturn
+    const nilai = varyNum(src.nilai_deal * growthFactor * (0.9 + r() * 0.12), r, 0.08);
     out.push({
       deal_id: `DL${String(startDealNum + i).padStart(5, "0")}`,
       periode,
@@ -376,7 +450,7 @@ function buildCrm(sourceCrm, periode, count, startDealNum, growthFactor, maxDay 
       no_hp_owner: src.no_hp_owner,
       email_owner: src.email_owner,
       tanggal_lahir_owner: src.tanggal_lahir_owner,
-      nilai_deal: varyNum(src.nilai_deal * growthFactor, r, 0.04),
+      nilai_deal: nilai,
       status,
       produk_utama: src.produk_utama,
       frekuensi_order: src.frekuensi_order,
@@ -391,21 +465,28 @@ function buildCrm(sourceCrm, periode, count, startDealNum, growthFactor, maxDay 
 function buildMarketing(sourceMarketing, periode, monthFraction, growthFactor) {
   return sourceMarketing.map((src, i) => {
     const r = seededRand(i + periode.charCodeAt(5) * 7);
-    const spend = varyNum(Math.round(src.spend * growthFactor * monthFraction), r, 0.04);
-    const conversions = varyNum(Math.max(1, Math.round(src.conversions * growthFactor * monthFraction)), r, 0.05);
-    const revenue = varyNum(Math.round(src.revenue_generated * growthFactor * monthFraction), r, 0.05);
+    // Spend cut slower than revenue; CAC rises, ROAS falls
+    const spendF = Math.min(1.05, growthFactor + (1 - growthFactor) * 0.35);
+    const spend = varyNum(Math.round(src.spend * spendF * monthFraction), r, 0.07);
+    const convSoft = growthFactor * (0.82 + r() * 0.12);
+    const conversions = varyNum(Math.max(1, Math.round(src.conversions * convSoft * monthFraction)), r, 0.1);
+    const revenue = varyNum(Math.round(src.revenue_generated * growthFactor * 0.9 * monthFraction), r, 0.1);
+    const impressions = varyNum(Math.round(src.impressions * spendF * monthFraction), r, 0.12);
+    const clicks = varyNum(Math.round(src.clicks * convSoft * monthFraction), r, 0.14);
+    const ctr = Math.round((clicks / Math.max(impressions, 1)) * 10000) / 100;
+    const convRate = Math.round((conversions / Math.max(clicks, 1)) * 10000) / 100;
     return {
       periode,
       campaign_name: src.campaign_name,
       channel: src.channel,
       target_audience: src.target_audience,
-      budget: varyNum(src.budget * growthFactor, r, 0.03),
+      budget: varyNum(src.budget * spendF, r, 0.05),
       spend,
-      impressions: varyNum(Math.round(src.impressions * monthFraction), r, 0.1),
-      clicks: varyNum(Math.round(src.clicks * monthFraction), r, 0.12),
-      ctr_pct: src.ctr_pct,
+      impressions,
+      clicks,
+      ctr_pct: ctr || src.ctr_pct,
       conversions,
-      conv_rate_pct: src.conv_rate_pct,
+      conv_rate_pct: convRate || src.conv_rate_pct,
       revenue_generated: revenue,
       roas: Math.round((revenue / Math.max(spend, 1)) * 100) / 100,
       cpl: Math.round(spend / Math.max(conversions, 1)),
@@ -425,24 +506,35 @@ async function resolvePlan() {
 
   const targetMonths = [];
 
-  if (maxPeriode <= endMonth && (await isMonthIncomplete(maxPeriode))) {
-    targetMonths.push(maxPeriode);
-  }
-
-  const firstNew = targetMonths.length ? addMonths(maxPeriode, 1) : maxPeriode;
-  if (firstNew <= endMonth) {
-    for (const m of monthsFromTo(firstNew, endMonth)) {
-      if (!targetMonths.includes(m)) targetMonths.push(m);
+  if (REFRESH_FROM) {
+    if (!/^\d{4}-\d{2}$/.test(REFRESH_FROM)) {
+      throw new Error(`Invalid --refresh-from=${REFRESH_FROM}. Use YYYY-MM.`);
     }
-  }
+    if (REFRESH_FROM > endMonth) {
+      throw new Error(`--refresh-from=${REFRESH_FROM} is after today (${endMonth}).`);
+    }
+    targetMonths.push(...monthsFromTo(REFRESH_FROM, endMonth));
+  } else {
+    // Refresh incomplete tail month (usually the current calendar month)
+    if (maxPeriode <= endMonth && (await isMonthIncomplete(maxPeriode))) {
+      targetMonths.push(maxPeriode);
+    }
 
-  if (!targetMonths.length) {
-    if (maxPeriode >= endMonth && (await isMonthIncomplete(endMonth))) {
-      targetMonths.push(endMonth);
-    } else if (maxPeriode < endMonth) {
-      targetMonths.push(...monthsFromTo(addMonths(maxPeriode, 1), endMonth));
-    } else {
-      targetMonths.push(endMonth);
+    // Then fill every missing month after the DB max through today
+    const firstMissing = addMonths(maxPeriode, 1);
+    if (firstMissing <= endMonth) {
+      for (const m of monthsFromTo(firstMissing, endMonth)) {
+        if (!targetMonths.includes(m)) targetMonths.push(m);
+      }
+    }
+
+    // Current month already in DB but needs a refresh pass
+    if (!targetMonths.length) {
+      if (maxPeriode >= endMonth) {
+        targetMonths.push(endMonth);
+      } else {
+        targetMonths.push(...monthsFromTo(addMonths(maxPeriode, 1), endMonth));
+      }
     }
   }
 
@@ -465,7 +557,8 @@ async function main() {
   console.log(`   Calendar month: ${currentMonth} | Fill through: ${endMonth}`);
   console.log(`   Target months: ${targetMonths.join(", ")}`);
   console.log(`   Source template: ${sourcePeriode}`);
-  console.log(`   Through: ${throughDate} (yesterday)`);
+  console.log(`   Through: ${throughDate}`);
+  if (REFRESH_FROM) console.log(`   Force refresh from: ${REFRESH_FROM}`);
   if (DRY_RUN) console.log("   Mode: DRY RUN (no writes)\n");
   else console.log("");
 
@@ -505,17 +598,20 @@ async function main() {
     const weeks = Math.max(1, Math.ceil(maxDay / 7));
     const growthFactor = growthFactorForMonth(periode, monthIndex + 1);
 
+    const vsPct = ((growthFactor - 1) * 100).toFixed(1);
     console.log(
       `🔧 Generating ${periode}${isPartial ? ` (partial, day 1–${maxDay})` : ""} ` +
-        `(growth ${(growthFactor * 100 - 100).toFixed(1)}% vs ${sourcePeriode})...`
+        `(economy ${vsPct}% vs ${sourcePeriode}, expense sticky)...`
     );
 
     allKpi.push(...buildKpi(sourceKpi, periode, monthFraction, growthFactor));
     allAbsensi.push(...buildAbsensi(sourceAbsensi, periode, weeks));
 
-    const salesCount = Math.max(1, Math.round(sourceSales.length * growthFactor * monthFraction));
-    const financeCount = Math.max(1, Math.round(sourceFinance.length * growthFactor * monthFraction));
-    const crmCount = Math.max(1, Math.round(sourceCrm.length * growthFactor * monthFraction));
+    // Volume softens with demand; keep a floor so charts stay readable
+    const vol = Math.max(0.55, growthFactor);
+    const salesCount = Math.max(1, Math.round(sourceSales.length * vol * monthFraction));
+    const financeCount = Math.max(1, Math.round(sourceFinance.length * monthFraction));
+    const crmCount = Math.max(1, Math.round(sourceCrm.length * Math.max(0.6, growthFactor) * monthFraction));
 
     allSales.push(...buildSales(sourceSales, periode, salesCount, trxNum, growthFactor, maxDay));
     trxNum += salesCount;
